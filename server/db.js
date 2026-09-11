@@ -3,7 +3,7 @@ const User = require('./models/User');
 
 const connectDB = async () => {
   try {
-    const uri = process.env.MONGODB_URI;
+    const uri = process.env.MONGODB_URI || 'mongodb+srv://salmanbs2018_db_user:shotai2026@cluster0.si43w8g.mongodb.net/shotai?appName=Cluster0';
     if (!uri) {
       console.error('Error: MONGODB_URI is not defined in .env');
       return;
