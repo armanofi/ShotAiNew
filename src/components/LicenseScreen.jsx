@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Shield, AlertCircle, CheckCircle, Eye, EyeOff } from 'lucide-react';
 
-const API_URL = 'http://localhost:5001/api';
+const API_URL = 'https://shot-ai-new.vercel.app/api';
 const STORAGE_KEY = 'shotai_license_validated';
 
 export default function LicenseScreen({ onValidated }) {
