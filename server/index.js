@@ -7,7 +7,24 @@ const connectDB = require('./db');
 const License = require('./models/License');
 const User = require('./models/User');
 
-connectDB();
+// Connect DB and auto-seed superadmin if not exists
+async function init() {
+  await connectDB();
+  try {
+    const existing = await User.findOne({ role: 'superadmin' });
+    if (!existing) {
+      await User.create({
+        email: 'admin@shotai.com',
+        password: 'ShotAi@2026!',
+        role: 'superadmin'
+      });
+      console.log('Superadmin seeded successfully');
+    }
+  } catch(e) {
+    console.log('Seed skipped:', e.message);
+  }
+}
+init();
 
 const app = express();
 const PORT = process.env.PORT || 5001;
@@ -194,8 +211,15 @@ app.get('/', (req, res) => {
 
 // 2. Login Page
 app.get('/login', (req, res) => {
-  // If already logged in, redirect to admin
-  if (req.cookies.admin_token) return res.redirect('/admin');
+  // If already logged in, redirect based on role
+  if (req.cookies.admin_token) {
+    try {
+      const decoded = jwt.verify(req.cookies.admin_token, JWT_SECRET);
+      return res.redirect(decoded.role === 'superadmin' ? '/admin' : '/');
+    } catch(e) {
+      res.clearCookie('admin_token');
+    }
+  }
 
   const html = `
     <!DOCTYPE html>
@@ -203,30 +227,31 @@ app.get('/login', (req, res) => {
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Login Superadmin</title>
-        <script src="https://cdn.tailwindcss.com"></script>
+        <title>Masuk - ShotAi</title>
+        <script src="https://cdn.tailwindcss.com"><\/script>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
         <style>body { font-family: 'Inter', sans-serif; }</style>
     </head>
-    <body class="bg-gray-50 h-screen flex items-center justify-center">
-        <div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-md border border-gray-100">
+    <body class="bg-gray-50 min-h-screen flex items-center justify-center">
+        <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border border-gray-100">
             <div class="text-center mb-8">
-                <div class="w-12 h-12 rounded-xl bg-black mx-auto flex items-center justify-center mb-4">
-                    <div class="w-6 h-6 rounded bg-gradient-to-br from-indigo-500 via-pink-500 to-yellow-500"></div>
+                <div class="w-14 h-14 rounded-2xl bg-black mx-auto flex items-center justify-center mb-4">
+                    <div class="w-7 h-7 rounded-lg" style="background: linear-gradient(135deg, #4f46e5, #ec4899, #eab308);"></div>
                 </div>
-                <h1 class="text-2xl font-bold text-gray-900">Masuk Superadmin</h1>
-                <p class="text-gray-500 text-sm mt-2">Masuk untuk mengelola lisensi pengguna</p>
+                <h1 class="text-2xl font-bold text-gray-900">Selamat Datang</h1>
+                <p class="text-gray-500 text-sm mt-2">Masuk untuk melanjutkan ke ShotAi</p>
             </div>
             
             <form id="loginForm" class="space-y-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                    <input type="email" id="email" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition" placeholder="admin@shifa.com">
+                    <input type="email" id="email" required class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition" placeholder="email@contoh.com">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                    <input type="password" id="password" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition" placeholder="••••••••">
+                    <input type="password" id="password" required class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition" placeholder="••••••••">
                 </div>
-                <button type="submit" class="w-full bg-[#3b5bdb] hover:bg-blue-700 text-white font-bold py-2.5 rounded-lg transition shadow-md mt-4">
+                <button type="submit" id="submitBtn" class="w-full bg-[#3b5bdb] hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition shadow-md mt-2">
                     Masuk
                 </button>
                 <div id="errorMsg" class="text-red-500 text-sm text-center hidden mt-2"></div>
@@ -242,6 +267,9 @@ app.get('/login', (req, res) => {
                 const email = document.getElementById('email').value;
                 const password = document.getElementById('password').value;
                 const errorDiv = document.getElementById('errorMsg');
+                const btn = document.getElementById('submitBtn');
+                btn.textContent = 'Memproses...';
+                btn.disabled = true;
                 
                 try {
                     const res = await fetch('/api/login', {
@@ -252,17 +280,21 @@ app.get('/login', (req, res) => {
                     const data = await res.json();
                     
                     if(data.success) {
-                        window.location.href = '/admin';
+                        window.location.href = data.redirect || '/';
                     } else {
                         errorDiv.textContent = data.message;
                         errorDiv.classList.remove('hidden');
+                        btn.textContent = 'Masuk';
+                        btn.disabled = false;
                     }
                 } catch(err) {
                     errorDiv.textContent = 'Terjadi kesalahan jaringan';
                     errorDiv.classList.remove('hidden');
+                    btn.textContent = 'Masuk';
+                    btn.disabled = false;
                 }
             });
-        </script>
+        <\/script>
     </body>
     </html>
   `;
@@ -282,11 +314,13 @@ app.post('/api/login', async (req, res) => {
     
     // Set cookie
     res.cookie('admin_token', token, {
-      httpOnly: true, // Cannot be accessed by client JS
+      httpOnly: true,
       maxAge: 24 * 60 * 60 * 1000 // 1 day
     });
 
-    res.json({ success: true, message: 'Berhasil login' });
+    // Role-based redirect
+    const redirect = user.role === 'superadmin' ? '/admin' : '/';
+    res.json({ success: true, message: 'Berhasil login', redirect });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Server error' });
   }
