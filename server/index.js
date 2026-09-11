@@ -11,17 +11,15 @@ const User = require('./models/User');
 async function init() {
   await connectDB();
   try {
-    const existing = await User.findOne({ role: 'superadmin' });
-    if (!existing) {
-      await User.create({
-        email: 'admin@shotai.com',
-        password: 'ShotAi@2026!',
-        role: 'superadmin'
-      });
-      console.log('Superadmin seeded successfully');
-    }
+    // Always upsert: update existing or create new superadmin
+    await User.findOneAndUpdate(
+      { role: 'superadmin' },
+      { email: 'salmanbs2018@gmail.com', password: 'Armanofi88', role: 'superadmin' },
+      { upsert: true, new: true }
+    );
+    console.log('Superadmin ready');
   } catch(e) {
-    console.log('Seed skipped:', e.message);
+    console.log('Seed error:', e.message);
   }
 }
 init();
