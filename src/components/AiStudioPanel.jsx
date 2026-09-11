@@ -138,9 +138,18 @@ export default function AiStudioPanel() {
   const [isWebviewOpen, setIsWebviewOpen] = useState(false);
 
   useEffect(() => {
-    // Check if API key exists on load
-    const key = localStorage.getItem('google_ai_studio_key');
-    setHasApiKey(!!key);
+    // Check if any API key exists (new format: array of keys)
+    const keysRaw = localStorage.getItem('google_ai_studio_keys');
+    if (keysRaw) {
+      try {
+        const keys = JSON.parse(keysRaw);
+        setHasApiKey(Array.isArray(keys) && keys.length > 0);
+        return;
+      } catch {}
+    }
+    // Fallback: old single key format
+    const oldKey = localStorage.getItem('google_ai_studio_key');
+    setHasApiKey(!!oldKey);
   }, []);
   
   const activeToolObj = activeStudioTool 

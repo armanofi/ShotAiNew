@@ -3,91 +3,171 @@ import { useAppStore } from '../store/useAppStore';
 import { ChevronRight, Plus, User } from 'lucide-react';
 import AddAccountModal from './AddAccountModal';
 
-// ── Real SVG logos for each tool ──────────────────────────────────────────────
+// ── Accurate SVG logos matching reference photo ────────────────────────────────
 const ToolLogo = ({ name }) => {
-  const size = 18;
+  const s = 20; // size
   switch (name) {
     case 'Flow':
+      // Google Flow - Google colors circle
       return (
-        <svg width={size} height={size} viewBox="0 0 48 48" fill="none">
-          <circle cx="24" cy="24" r="24" fill="#1a73e8"/>
-          <path d="M14 24 Q24 12 34 24 Q24 36 14 24Z" fill="white" opacity="0.9"/>
-          <circle cx="24" cy="24" r="4" fill="white"/>
+        <svg width={s} height={s} viewBox="0 0 48 48" fill="none">
+          <circle cx="24" cy="24" r="22" fill="#fff" stroke="#e2e8f0" strokeWidth="1"/>
+          <path d="M24 8 A16 16 0 0 1 40 24" stroke="#4285F4" strokeWidth="5" strokeLinecap="round" fill="none"/>
+          <path d="M40 24 A16 16 0 0 1 24 40" stroke="#EA4335" strokeWidth="5" strokeLinecap="round" fill="none"/>
+          <path d="M24 40 A16 16 0 0 1 8 24" stroke="#FBBC05" strokeWidth="5" strokeLinecap="round" fill="none"/>
+          <path d="M8 24 A16 16 0 0 1 24 8" stroke="#34A853" strokeWidth="5" strokeLinecap="round" fill="none"/>
+          <circle cx="24" cy="24" r="5" fill="#4285F4"/>
         </svg>
       );
+
     case 'Dola':
+      // Purple gradient ring/infinity shape
       return (
-        <svg width={size} height={size} viewBox="0 0 48 48" fill="none">
-          <rect width="48" height="48" rx="12" fill="#FF4D00"/>
-          <text x="50%" y="58%" dominantBaseline="middle" textAnchor="middle" fontSize="22" fontWeight="900" fill="white">D</text>
-        </svg>
-      );
-    case 'Grok':
-      return (
-        <svg width={size} height={size} viewBox="0 0 48 48" fill="none">
-          <rect width="48" height="48" rx="12" fill="#000000"/>
-          <path d="M12 12 L36 36 M12 36 L36 12" stroke="white" strokeWidth="5" strokeLinecap="round"/>
-        </svg>
-      );
-    case 'ChatGPT':
-      return (
-        <svg width={size} height={size} viewBox="0 0 41 41" fill="none">
-          <path d="M37.532 16.87a9.963 9.963 0 0 0-.856-8.184 10.078 10.078 0 0 0-10.855-4.835 9.964 9.964 0 0 0-6.15-3.666 10.079 10.079 0 0 0-11.51 4.972 9.967 9.967 0 0 0-6.634 4.much 10.08 10.08 0 0 0 1.24 11.817 9.965 9.965 0 0 0 .856 8.185 10.079 10.079 0 0 0 10.855 4.835 9.965 9.965 0 0 0 6.15 3.666 10.079 10.079 0 0 0 11.51-4.972 9.967 9.967 0 0 0 6.634-4.806 10.079 10.079 0 0 0-1.24-11.816zm-22.478 31.485a7.474 7.474 0 0 1-4.799-1.735c.061-.033.168-.091.237-.134l7.964-4.6a1.294 1.294 0 0 0 .655-1.134V19.054l-3.366 1.944a.12.12 0 0 0-.066.092v9.299a7.505 7.505 0 0 1-7.505-7.504 7.474 7.474 0 0 1 1.097-3.87c.03.063.065.132.101.2l7.964 4.6a1.294 1.294 0 0 0 1.308 0l9.724-5.614v3.888a.12.12 0 0 0 .048.103l6.783 3.919a7.504 7.504 0 0 1-7.505 7.504zm-6.718-7.27a7.474 7.474 0 0 1-1.097-3.87 7.474 7.474 0 0 1 3.898-6.572v9.2a1.294 1.294 0 0 0 .655 1.133l7.964 4.6a7.476 7.476 0 0 1-4.799 1.735 7.506 7.506 0 0 1-6.621-6.226z" fill="#10a37f"/>
-        </svg>
-      );
-    case 'CapCut':
-    case 'Dreamina':
-      return (
-        <svg width={size} height={size} viewBox="0 0 48 48" fill="none">
-          <rect width="48" height="48" rx="12" fill="#000000"/>
-          <path d="M24 10 L38 24 L24 38 L10 24 Z" fill="white"/>
-          <circle cx="24" cy="24" r="5" fill="black"/>
-        </svg>
-      );
-    case 'Facebook':
-      return (
-        <svg width={size} height={size} viewBox="0 0 48 48" fill="none">
-          <circle cx="24" cy="24" r="24" fill="#1877F2"/>
-          <path d="M32 24H27V36H21V24H17V18H21V15C21 11.5 23 10 26 10H32V16H28C27 16 27 16.5 27 17V18H32L32 24Z" fill="white"/>
-        </svg>
-      );
-    case 'Instagram':
-      return (
-        <svg width={size} height={size} viewBox="0 0 48 48" fill="none">
+        <svg width={s} height={s} viewBox="0 0 48 48" fill="none">
           <defs>
-            <radialGradient id="ig1" cx="30%" cy="107%" r="150%">
+            <linearGradient id="dola_g" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stopColor="#c084fc"/>
+              <stop offset="50%" stopColor="#a855f7"/>
+              <stop offset="100%" stopColor="#7c3aed"/>
+            </linearGradient>
+          </defs>
+          <ellipse cx="24" cy="24" rx="20" ry="14" stroke="url(#dola_g)" strokeWidth="7" fill="none" transform="rotate(-35 24 24)"/>
+          <ellipse cx="24" cy="24" rx="20" ry="14" stroke="#c4b5fd" strokeWidth="3" fill="none" transform="rotate(-35 24 24)" opacity="0.4"/>
+        </svg>
+      );
+
+    case 'Grok':
+      // Black circle with diagonal slash (xAI Grok logo)
+      return (
+        <svg width={s} height={s} viewBox="0 0 48 48" fill="none">
+          <circle cx="24" cy="24" r="23" fill="#111111"/>
+          <ellipse cx="24" cy="24" rx="12" ry="20" stroke="white" strokeWidth="4.5" fill="none" transform="rotate(30 24 24)"/>
+          <line x1="8" y1="12" x2="40" y2="36" stroke="#111111" strokeWidth="6"/>
+          <line x1="10" y1="10" x2="38" y2="38" stroke="white" strokeWidth="4" strokeLinecap="round"/>
+        </svg>
+      );
+
+    case 'ChatGPT':
+      // OpenAI rosette logo - black background, white flower/gear
+      return (
+        <svg width={s} height={s} viewBox="0 0 48 48" fill="none">
+          <rect width="48" height="48" rx="10" fill="#10a37f"/>
+          <g transform="translate(24,24)" fill="white">
+            {[0,45,90,135,180,225,270,315].map((angle, i) => {
+              const rad = (angle * Math.PI) / 180;
+              const x = Math.cos(rad) * 10;
+              const y = Math.sin(rad) * 10;
+              return <ellipse key={i} cx={x} cy={y} rx="5.5" ry="9" transform={`rotate(${angle} ${x} ${y})`} opacity="0.85"/>;
+            })}
+            <circle cx="0" cy="0" r="6" fill="#10a37f"/>
+            <circle cx="0" cy="0" r="4.5" fill="white"/>
+          </g>
+        </svg>
+      );
+
+    case 'CapCut':
+      // Two crossing diagonal slashes (scissors/X shape)
+      return (
+        <svg width={s} height={s} viewBox="0 0 48 48" fill="none">
+          <rect width="48" height="48" rx="8" fill="#f0f0f0"/>
+          <g transform="translate(24,24)">
+            <rect x="-16" y="-5" width="32" height="10" rx="3" fill="#111111" transform="rotate(45)"/>
+            <rect x="-16" y="-5" width="32" height="10" rx="3" fill="#111111" transform="rotate(-45)"/>
+            <rect x="-5" y="-16" width="10" height="7" rx="2" fill="#f0f0f0" transform="rotate(0)"/>
+            <rect x="-5" y="9" width="10" height="7" rx="2" fill="#f0f0f0" transform="rotate(0)"/>
+          </g>
+        </svg>
+      );
+
+    case 'Facebook':
+      // Blue circle with white lowercase f
+      return (
+        <svg width={s} height={s} viewBox="0 0 48 48" fill="none">
+          <circle cx="24" cy="24" r="24" fill="#1877F2"/>
+          <path d="M28 18h-3c-0.6 0-1 0.4-1 1v3h4l-0.5 4H24v10h-4V26h-3v-4h3v-3c0-3.3 2.7-6 6-6h3v4z" fill="white"/>
+        </svg>
+      );
+
+    case 'Instagram':
+      // Camera with gradient background (purple→orange)
+      return (
+        <svg width={s} height={s} viewBox="0 0 48 48" fill="none">
+          <defs>
+            <radialGradient id="ig_bg" cx="30%" cy="105%" r="140%">
               <stop offset="0%" stopColor="#fdf497"/>
-              <stop offset="5%" stopColor="#fdf497"/>
-              <stop offset="45%" stopColor="#fd5949"/>
-              <stop offset="60%" stopColor="#d6249f"/>
-              <stop offset="90%" stopColor="#285AEB"/>
+              <stop offset="10%" stopColor="#fdf497"/>
+              <stop offset="40%" stopColor="#fd5949"/>
+              <stop offset="55%" stopColor="#d6249f"/>
+              <stop offset="85%" stopColor="#285AEB"/>
             </radialGradient>
           </defs>
-          <rect width="48" height="48" rx="12" fill="url(#ig1)"/>
-          <rect x="12" y="12" width="24" height="24" rx="7" stroke="white" strokeWidth="2.5" fill="none"/>
-          <circle cx="24" cy="24" r="6" stroke="white" strokeWidth="2.5" fill="none"/>
-          <circle cx="33" cy="15" r="1.5" fill="white"/>
+          <rect width="48" height="48" rx="11" fill="url(#ig_bg)"/>
+          <rect x="10" y="10" width="28" height="28" rx="8" stroke="white" strokeWidth="2.8" fill="none"/>
+          <circle cx="24" cy="24" r="7.5" stroke="white" strokeWidth="2.8" fill="none"/>
+          <circle cx="34" cy="14" r="2" fill="white"/>
         </svg>
       );
+
     case 'TikTok':
+      // Music note with cyan+red shadow effect on black
       return (
-        <svg width={size} height={size} viewBox="0 0 48 48" fill="none">
-          <rect width="48" height="48" rx="12" fill="#010101"/>
-          <path d="M30 10h-5.5v19.5a4.5 4.5 0 1 1-4.5-4.5c.4 0 .8.05 1.15.14V19.5A10.2 10.2 0 0 0 20 19.3a10 10 0 1 0 10 10V22.6A14.8 14.8 0 0 0 38 24v-5.5a9.3 9.3 0 0 1-8-8.5z" fill="white"/>
+        <svg width={s} height={s} viewBox="0 0 48 48" fill="none">
+          <rect width="48" height="48" rx="10" fill="#010101"/>
+          {/* Cyan shadow */}
+          <path d="M21.5 32.5c0 3 2.2 5 5 5s5-2.2 5-5-2.2-5-5-5c-0.35 0-0.7 0.04-1 0.1V16.5l8 2V12l-8-2.5V28c-0.9-0.6-2-1-3-1" fill="#69C9D0" opacity="0.8" transform="translate(-1.5, -1)"/>
+          {/* Red shadow */}
+          <path d="M21.5 32.5c0 3 2.2 5 5 5s5-2.2 5-5-2.2-5-5-5c-0.35 0-0.7 0.04-1 0.1V16.5l8 2V12l-8-2.5V28c-0.9-0.6-2-1-3-1" fill="#EE1D52" opacity="0.8" transform="translate(1.5, 1)"/>
+          {/* White main */}
+          <path d="M21.5 32.5c0 3 2.2 5 5 5s5-2.2 5-5-2.2-5-5-5c-0.35 0-0.7 0.04-1 0.1V16.5l8 2V12l-8-2.5V28c-0.9-0.6-2-1-3-1" fill="white"/>
         </svg>
       );
+
     case 'FastMoss':
+      // Pink/red rounded square with white oval ring (planet style)
       return (
-        <svg width={size} height={size} viewBox="0 0 48 48" fill="none">
-          <rect width="48" height="48" rx="12" fill="#00B86B"/>
-          <path d="M10 24 L20 14 L28 22 L38 10" stroke="white" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"/>
-          <path d="M10 38 L20 28 L28 34 L38 22" stroke="white" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.6"/>
+        <svg width={s} height={s} viewBox="0 0 48 48" fill="none">
+          <defs>
+            <radialGradient id="fm_g" cx="40%" cy="30%" r="80%">
+              <stop offset="0%" stopColor="#ff6eb4"/>
+              <stop offset="100%" stopColor="#e0185c"/>
+            </radialGradient>
+          </defs>
+          <rect width="48" height="48" rx="12" fill="url(#fm_g)"/>
+          <ellipse cx="24" cy="24" rx="14" ry="14" fill="#ff8cc8" opacity="0.5"/>
+          <ellipse cx="24" cy="24" rx="8" ry="8" fill="#ff4d9e" opacity="0.8"/>
+          {/* Orbit ring */}
+          <ellipse cx="24" cy="24" rx="18" ry="10" stroke="white" strokeWidth="3.5" fill="none" transform="rotate(-20 24 24)"/>
+          <circle cx="37" cy="21" r="3" fill="white"/>
         </svg>
       );
+
+    case 'Dreamina':
+      // Black background with colorful sail/kite shape (blue+teal→yellow)
+      return (
+        <svg width={s} height={s} viewBox="0 0 48 48" fill="none">
+          <rect width="48" height="48" rx="10" fill="#050a10"/>
+          <defs>
+            <linearGradient id="dr_g1" x1="0" y1="1" x2="1" y2="0">
+              <stop offset="0%" stopColor="#00c8ff"/>
+              <stop offset="60%" stopColor="#00e5c8"/>
+              <stop offset="100%" stopColor="#ffe000"/>
+            </linearGradient>
+          </defs>
+          {/* Kite/sail shape - sharp pointy triangle */}
+          <path d="M24 6 L42 28 L24 42 L6 28 Z" fill="url(#dr_g1)" opacity="0.15"/>
+          <path d="M24 6 L38 26 L24 40 L10 26 Z" fill="url(#dr_g1)" opacity="0.3"/>
+          <path d="M24 8 L36 27 L24 38 L12 27 Z" fill="url(#dr_g1)" opacity="0.6"/>
+          <path d="M24 11 L34 28 L24 36 L14 28 Z" fill="url(#dr_g1)"/>
+          {/* Bright tip */}
+          <circle cx="24" cy="11" r="2.5" fill="#ffe000" opacity="0.9"/>
+        </svg>
+      );
+
     default:
       return <span style={{ fontSize: '16px' }}>🔧</span>;
   }
 };
+
 
 function ToolMenuItem({ tool, category, onAddClick }) {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -260,12 +340,13 @@ export default function Sidebar() {
         <div
           className="flex items-center justify-center rounded-lg flex-shrink-0"
           style={{
-            width: '30px', height: '30px',
-            background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
-            boxShadow: '0 0 12px rgba(59,130,246,0.4)',
+            width: '32px', height: '32px',
+            background: 'linear-gradient(135deg, #4F7FFF 0%, #7C3AED 100%)',
+            boxShadow: '0 0 14px rgba(124,58,237,0.5)',
+            borderRadius: '8px',
           }}
         >
-          <span className="text-white font-bold text-sm">S</span>
+          <span className="text-white font-black text-sm" style={{ letterSpacing: '-0.5px' }}>SA</span>
         </div>
         <span
           className="font-bold text-lg"

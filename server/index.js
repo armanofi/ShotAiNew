@@ -59,7 +59,7 @@ app.get('/', (req, res) => {
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>AI Tools Manager</title>
+        <title>ShotAI</title>
         <script src="https://cdn.tailwindcss.com"></script>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
         <style>
@@ -81,7 +81,7 @@ app.get('/', (req, res) => {
                 <div class="w-8 h-8 rounded-lg bg-black flex items-center justify-center">
                     <div class="w-4 h-4 rounded-sm" style="background: linear-gradient(135deg, #4f46e5, #ec4899, #eab308);"></div>
                 </div>
-                <span class="font-bold text-lg">AI Tools Manager</span>
+                <span class="font-bold text-lg">ShotAI</span>
             </div>
             <nav class="hidden md:flex items-center gap-8 text-sm font-medium text-gray-600">
                 <a href="#" class="hover:text-black">Workspace</a>
@@ -128,7 +128,7 @@ app.get('/', (req, res) => {
                         <div class="w-3 h-3 rounded-full bg-gray-600"></div>
                         <div class="w-3 h-3 rounded-full bg-gray-600"></div>
                         <div class="w-3 h-3 rounded-full bg-gray-600"></div>
-                        <span class="text-xs text-gray-400 font-semibold ml-2">AI Tools Manager</span>
+                        <span class="text-xs text-gray-400 font-semibold ml-2">ShotAI</span>
                     </div>
 
                     <!-- App Body -->
@@ -536,3 +536,4 @@ if (process.env.NODE_ENV !== 'production') {
 
 // Export for Vercel Serverless
 module.exports = app;
+
