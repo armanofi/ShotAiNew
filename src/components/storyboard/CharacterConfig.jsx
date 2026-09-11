@@ -134,17 +134,26 @@ export default function CharacterConfig({ data, onChange, showGear = true, showI
           </div>
           <div style={{ width: '80px' }}>
             <span style={S.label}>Warna</span>
-            <input style={S.input} placeholder="Merah..." value={data.warnaBaju || ''} onChange={e => update('warnaBaju', e.target.value)} />
+            <input style={{ ...S.input, opacity: data.clothesPhotoUrl ? 0.4 : 1 }}
+              placeholder="Merah..." value={data.warnaBaju || ''}
+              disabled={!!data.clothesPhotoUrl}
+              onChange={e => update('warnaBaju', e.target.value)} />
           </div>
         </div>
         <div style={S.row}>
           <div style={{ flex: 1 }}>
             <span style={S.label}>👖 Celana</span>
-            <input style={S.input} placeholder="Jeans..." value={data.celana || ''} onChange={e => update('celana', e.target.value)} />
+            <input style={{ ...S.input, opacity: data.clothesPhotoUrl ? 0.4 : 1 }}
+              placeholder="Jeans..." value={data.celana || ''}
+              disabled={!!data.clothesPhotoUrl}
+              onChange={e => update('celana', e.target.value)} />
           </div>
           <div style={{ width: '80px' }}>
             <span style={S.label}>Warna</span>
-            <input style={S.input} placeholder="Navy..." value={data.warnaCelana || ''} onChange={e => update('warnaCelana', e.target.value)} />
+            <input style={{ ...S.input, opacity: data.clothesPhotoUrl ? 0.4 : 1 }}
+              placeholder="Navy..." value={data.warnaCelana || ''}
+              disabled={!!data.clothesPhotoUrl}
+              onChange={e => update('warnaCelana', e.target.value)} />
           </div>
         </div>
       </Collapsible>

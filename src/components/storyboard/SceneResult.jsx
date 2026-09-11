@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Copy, Check, RefreshCw, Film } from 'lucide-react';
+import { Copy, Check, RefreshCw, Film, User } from 'lucide-react';
 
 function CopyButton({ text }) {
   const [copied, setCopied] = useState(false);
@@ -49,15 +49,10 @@ function PromptBox({ label, prompt, color }) {
 
 
 export default function SceneResult({ scene, onRegenerate }) {
-  const [regen, setRegen] = useState(false);
+  const [activeTab, setActiveTab] = useState(0);
 
-  const handleRegen = () => {
-    setRegen(true);
-    setTimeout(() => {
-      onRegenerate(scene.id);
-      setRegen(false);
-    }, 600);
-  };
+  const prompts = scene.prompts || [];
+  const currentPrompt = prompts[activeTab];
 
   return (
     <div style={{
@@ -77,12 +72,39 @@ export default function SceneResult({ scene, onRegenerate }) {
         </div>
       </div>
 
-      <div style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-        {/* Image-to-Image prompt */}
-        <PromptBox label="🖼 Prompt Image-to-Image" prompt={scene.itiPrompt} color="#3b82f6" />
+      {/* Tabs */}
+      <div style={{ display: 'flex', overflowX: 'auto', borderBottom: '1px solid #1e293b', padding: '0 12px' }}>
+        {prompts.map((p, idx) => (
+          <button
+            key={idx}
+            onClick={() => setActiveTab(idx)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '6px',
+              padding: '12px 16px', border: 'none', background: 'none', cursor: 'pointer',
+              fontSize: '12px', fontWeight: activeTab === idx ? 700 : 500,
+              color: activeTab === idx ? '#3b82f6' : '#64748b',
+              borderBottom: activeTab === idx ? '2px solid #3b82f6' : '2px solid transparent',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            <User size={14} />
+            {p.character}
+          </button>
+        ))}
+      </div>
 
-        {/* Image-to-Video prompt */}
-        <PromptBox label="🎬 Prompt Image-to-Video" prompt={scene.itvPrompt} color="#a855f7" />
+      <div style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        {currentPrompt ? (
+          <>
+            {/* Image-to-Image prompt */}
+            <PromptBox label={`🖼 Prompt Image-to-Image (${currentPrompt.character})`} prompt={currentPrompt.itiPrompt} color="#3b82f6" />
+
+            {/* Image-to-Video prompt */}
+            <PromptBox label={`🎬 Prompt Image-to-Video (${currentPrompt.character})`} prompt={currentPrompt.itvPrompt} color="#a855f7" />
+          </>
+        ) : (
+          <div style={{ color: '#64748b', fontSize: '12px', textAlign: 'center' }}>Tidak ada prompt untuk karakter ini.</div>
+        )}
       </div>
     </div>
   );
