@@ -270,7 +270,7 @@ export default function LicenseScreen({ onValidated }) {
               value={email}
               onChange={e => { setEmail(e.target.value); setStatus('idle'); setErrorMsg(''); }}
               onKeyDown={handleKeyDown}
-              placeholder="salmanbs2026@gmail.com"
+              placeholder="contoh@gmail.com"
               spellCheck={false}
               autoComplete="off"
               disabled={status === 'checking' || status === 'success'}

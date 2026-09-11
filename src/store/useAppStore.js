@@ -10,13 +10,14 @@ const createInitialTool = (name, url) => ({
 });
 
 export const useAppStore = create((set) => ({
-  // Workspace Tools
+  // Workspace Tools (semua akun kosong - versi distribusi)
   workspaceTools: [
     createInitialTool('Flow', 'https://flow.google.com/about'),
     createInitialTool('Dola', 'https://www.dola.com/chat/'),
-    createInitialTool('Grok', 'https://grok.com/'), // Using grok.com as assumed
+    createInitialTool('Grok', 'https://grok.com/'),
     createInitialTool('ChatGPT', 'https://chatgpt.com/'),
     createInitialTool('CapCut', 'https://www.capcut.com/id-id/'),
+    createInitialTool('Dreamina', 'https://dreamina.capcut.com/'),
   ],
   
   // Social Media Tools
@@ -33,9 +34,9 @@ export const useAppStore = create((set) => ({
 
   // UI State
   isAiStudioOpen: false,
-  studioView: null, // null | 'storyboard' | ...
-  activeAccount: null, // { toolName, accountId, url }
-  activeStudioTool: null, // null means showing grid, otherwise string name of the tool
+  studioView: null,
+  activeAccount: null,
+  activeStudioTool: null,
 
   // Actions
   toggleAiStudio: () => set((state) => ({ isAiStudioOpen: !state.isAiStudioOpen })),
@@ -63,7 +64,22 @@ export const useAppStore = create((set) => ({
       }
       return tool;
     });
-
     return { [categoryKey]: updatedTools };
-  })
+  }),
+
+  removeAccount: (category, toolName, accountId) => set((state) => {
+    let categoryKey = 'workspaceTools';
+    if (category === 'sosmed') categoryKey = 'sosmedTools';
+    else if (category === 'risetProduk') categoryKey = 'risetProdukTools';
+    const updatedTools = state[categoryKey].map(tool => {
+      if (tool.name === toolName) {
+        return {
+          ...tool,
+          accounts: tool.accounts.filter(a => a.id !== accountId)
+        };
+      }
+      return tool;
+    });
+    return { [categoryKey]: updatedTools };
+  }),
 }));

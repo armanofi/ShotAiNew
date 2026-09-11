@@ -1,4 +1,4 @@
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, session } = require('electron');
 const path = require('path');
 
 const isDev = process.env.NODE_ENV === 'development';
@@ -30,8 +30,14 @@ function createWindow() {
       nodeIntegration: true,
       contextIsolation: false,
       webviewTag: true,
+      webSecurity: false, // Allow fetch to external URLs (Vercel API)
     },
     autoHideMenuBar: true,
+  });
+
+  // Allow all permission requests (microphone, camera, notifications etc)
+  mainWindow.webContents.session.setPermissionRequestHandler((webContents, permission, callback) => {
+    callback(true);
   });
 
   // When main window is ready to show, close splash and show main
@@ -51,6 +57,16 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+  // Allow fetch to all external URLs (needed for Vercel API license check)
+  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        'Content-Security-Policy': ["default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob:"]
+      }
+    });
+  });
+
   createWindow();
 
   app.on('activate', function () {
