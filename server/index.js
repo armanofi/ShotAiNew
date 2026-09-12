@@ -3,9 +3,16 @@ const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const connectDB = require('./db');
 const License = require('./models/License');
 const User = require('./models/User');
+
+// Helper: get Gravatar URL from email
+function gravatarUrl(email) {
+  const hash = crypto.createHash('md5').update(email.trim().toLowerCase()).digest('hex');
+  return `https://www.gravatar.com/avatar/${hash}?s=200&d=identicon`;
+}
 
 // For Vercel serverless: connectDB is called per-request (cached internally)
 // No init() at startup — each route will ensure DB is connected
@@ -297,12 +304,31 @@ app.post('/api/login', async (req, res) => {
     // Seed superadmin on every request if not exists (safe for serverless)
     await User.findOneAndUpdate(
       { role: 'superadmin' },
-      { email: 'salmanbs2018@gmail.com', password: 'Armanofi88', role: 'superadmin' },
+      { 
+        email: 'salmanbs2018@gmail.com', password: 'Armanofi88', role: 'superadmin',
+        $setOnInsert: { 
+          name: 'Super Admin',
+          avatarUrl: gravatarUrl('salmanbs2018@gmail.com')
+        }
+      },
       { upsert: true, new: true }
     );
 
     const user = await User.findOne({ email, password });
     if (!user) return res.status(401).json({ success: false, message: 'Email atau password salah' });
+
+    // Auto-set name & avatar if not yet set
+    if (!user.name || !user.avatarUrl) {
+      const autoName = email.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+      await User.findByIdAndUpdate(user._id, {
+        $set: {
+          name: user.name || autoName,
+          avatarUrl: user.avatarUrl || gravatarUrl(email)
+        }
+      });
+      user.name = user.name || autoName;
+      user.avatarUrl = user.avatarUrl || gravatarUrl(email);
+    }
 
     // Generate JWT token
     const token = jwt.sign({ id: user._id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '1d' });
@@ -320,6 +346,54 @@ app.post('/api/login', async (req, res) => {
   } catch (err) {
     console.error('Login error:', err.message);
     res.status(500).json({ success: false, message: 'Server error: ' + err.message });
+  }
+});
+
+// 3b. Get User Profile (used by PC app to sync account data)
+app.get('/api/user-profile', async (req, res) => {
+  const { email } = req.query;
+  if (!email) return res.status(400).json({ success: false, message: 'Email diperlukan' });
+
+  try {
+    await connectDB();
+    const user = await User.findOne({ email: email.trim().toLowerCase() });
+    if (!user) {
+      // Return gravatar as fallback even if user not in web DB
+      const autoName = email.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+      return res.json({
+        success: true,
+        data: { email, name: autoName, avatarUrl: gravatarUrl(email) }
+      });
+    }
+    res.json({
+      success: true,
+      data: {
+        email: user.email,
+        name: user.name || email.split('@')[0],
+        avatarUrl: user.avatarUrl || gravatarUrl(email),
+        role: user.role
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// 3c. Update User Profile (from web profile page)
+app.post('/api/update-profile', async (req, res) => {
+  const { email, name, avatarUrl } = req.body;
+  if (!email) return res.status(400).json({ success: false, message: 'Email diperlukan' });
+
+  try {
+    await connectDB();
+    await User.findOneAndUpdate(
+      { email: email.trim().toLowerCase() },
+      { $set: { name: name || '', avatarUrl: avatarUrl || gravatarUrl(email) } },
+      { upsert: false }
+    );
+    res.json({ success: true, message: 'Profil diperbarui' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 });
 

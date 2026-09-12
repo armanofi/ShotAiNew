@@ -62,6 +62,7 @@
     "electron-builder": "^26.15.3",
     "oxlint": "^1.81.0",
     "postcss": "^8.5.28",
+    "sharp": "^0.35.4",
     "tailwindcss": "^3.4.19",
     "vite": "^8.3.0",
     "wait-on": "^9.1.0"

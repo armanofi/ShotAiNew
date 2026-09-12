@@ -80,6 +80,19 @@ export default function LicenseScreen({ onValidated }) {
         localStorage.setItem(STORAGE_KEY, 'true');
         localStorage.setItem('shotai_license_type', 'premium');
         localStorage.setItem('shotai_premium_email', email.trim());
+
+        // Sync user profile from web (name, avatar)
+        try {
+          const profileRes = await fetch(`${API_URL}/user-profile?email=${encodeURIComponent(email.trim())}`);
+          const profileData = await profileRes.json();
+          if (profileData.success && profileData.data) {
+            localStorage.setItem('shotai_user_name', profileData.data.name || '');
+            localStorage.setItem('shotai_user_avatar', profileData.data.avatarUrl || '');
+          }
+        } catch (_) {
+          // Profile fetch failed silently - non-critical
+        }
+
         setTimeout(() => onValidated(), 900);
       } else {
         setStatus('error');

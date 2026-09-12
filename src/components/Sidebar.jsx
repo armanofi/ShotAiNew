@@ -326,6 +326,9 @@ export default function Sidebar() {
 
   const licenseType = localStorage.getItem('shotai_license_type') || 'free';
   const isPremium = licenseType === 'premium';
+  const userName = localStorage.getItem('shotai_user_name') || (isPremium ? (localStorage.getItem('shotai_premium_email') || '').split('@')[0] : 'Pengguna');
+  const userAvatar = localStorage.getItem('shotai_user_avatar') || '';
+  const userEmail = localStorage.getItem('shotai_premium_email') || '';
 
   return (
     <div
@@ -399,12 +402,23 @@ export default function Sidebar() {
         {/* User Profile & Logout */}
         <div className="flex items-center justify-between p-2 mt-1 rounded-xl transition-colors" style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid #1e293b' }}>
           <div className="flex items-center gap-2 overflow-hidden">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold" style={{ background: isPremium ? 'linear-gradient(135deg, #6366f1, #4f46e5)' : '#475569' }}>
-              {isPremium ? '★' : 'U'}
+            {/* Avatar */}
+            <div className="flex-shrink-0" style={{ width: '32px', height: '32px', borderRadius: '8px', overflow: 'hidden', border: isPremium ? '2px solid #6366f1' : '2px solid #334155' }}>
+              {userAvatar ? (
+                <img
+                  src={userAvatar}
+                  alt={userName}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  onError={e => { e.currentTarget.style.display = 'none'; e.currentTarget.nextSibling.style.display = 'flex'; }}
+                />
+              ) : null}
+              <div style={{ width: '100%', height: '100%', display: userAvatar ? 'none' : 'flex', alignItems: 'center', justifyContent: 'center', background: isPremium ? 'linear-gradient(135deg, #6366f1, #4f46e5)' : '#475569', color: 'white', fontSize: '12px', fontWeight: 700 }}>
+                {userName.charAt(0).toUpperCase() || 'U'}
+              </div>
             </div>
-            <div className="flex flex-col">
-              <span className="text-xs text-white font-semibold truncate w-24">
-                {isPremium ? (localStorage.getItem('shotai_premium_email') || 'Premium').split('@')[0] : 'Profil Aktif'}
+            <div className="flex flex-col overflow-hidden">
+              <span className="text-xs text-white font-semibold truncate" style={{ maxWidth: '120px' }}>
+                {userName || 'Pengguna'}
               </span>
               <span className={`text-[10px] font-medium ${isPremium ? 'text-green-400' : 'text-gray-400'}`}>
                 {isPremium ? '⭐ Premium' : 'Free License'}
@@ -417,6 +431,8 @@ export default function Sidebar() {
                 localStorage.removeItem('shotai_license_validated');
                 localStorage.removeItem('shotai_license_type');
                 localStorage.removeItem('shotai_premium_email');
+                localStorage.removeItem('shotai_user_name');
+                localStorage.removeItem('shotai_user_avatar');
                 window.location.reload();
               }
             }}
