@@ -7,22 +7,9 @@ const connectDB = require('./db');
 const License = require('./models/License');
 const User = require('./models/User');
 
-// Connect DB and auto-seed superadmin if not exists
-async function init() {
-  await connectDB();
-  try {
-    // Always upsert: update existing or create new superadmin
-    await User.findOneAndUpdate(
-      { role: 'superadmin' },
-      { email: 'salmanbs2018@gmail.com', password: 'Armanofi88', role: 'superadmin' },
-      { upsert: true, new: true }
-    );
-    console.log('Superadmin ready');
-  } catch(e) {
-    console.log('Seed error:', e.message);
-  }
-}
-init();
+// For Vercel serverless: connectDB is called per-request (cached internally)
+// No init() at startup — each route will ensure DB is connected
+
 
 const app = express();
 const PORT = process.env.PORT || 5001;
@@ -304,6 +291,16 @@ app.post('/api/login', async (req, res) => {
   const { email, password } = req.body;
   
   try {
+    // Always ensure DB connected (critical for Vercel serverless)
+    await connectDB();
+
+    // Seed superadmin on every request if not exists (safe for serverless)
+    await User.findOneAndUpdate(
+      { role: 'superadmin' },
+      { email: 'salmanbs2018@gmail.com', password: 'Armanofi88', role: 'superadmin' },
+      { upsert: true, new: true }
+    );
+
     const user = await User.findOne({ email, password });
     if (!user) return res.status(401).json({ success: false, message: 'Email atau password salah' });
 
@@ -313,6 +310,7 @@ app.post('/api/login', async (req, res) => {
     // Set cookie
     res.cookie('admin_token', token, {
       httpOnly: true,
+      sameSite: 'lax',
       maxAge: 24 * 60 * 60 * 1000 // 1 day
     });
 
@@ -320,7 +318,8 @@ app.post('/api/login', async (req, res) => {
     const redirect = user.role === 'superadmin' ? '/admin' : '/';
     res.json({ success: true, message: 'Berhasil login', redirect });
   } catch (err) {
-    res.status(500).json({ success: false, message: 'Server error' });
+    console.error('Login error:', err.message);
+    res.status(500).json({ success: false, message: 'Server error: ' + err.message });
   }
 });
 
@@ -336,6 +335,7 @@ app.get('/logout', (req, res) => {
 // 5. Admin Dashboard (Protected)
 app.get('/admin', requireAuth, async (req, res) => {
   try {
+    await connectDB();
     const rows = await License.find().sort({ createdAt: -1 });
     
     let rowsHtml = '';
@@ -478,6 +478,7 @@ app.post('/api/admin/generate', requireAuth, async (req, res) => {
   const newCode = `${prefix}-${randomPart1}-${randomPart2}`;
 
   try {
+    await connectDB();
     await License.create({ code: newCode, type, owner_email: email || null });
     res.json({ success: true, code: newCode });
   } catch (err) {
@@ -493,6 +494,7 @@ app.post('/api/verify-license', async (req, res) => {
   if (!code) return res.status(400).json({ success: false, message: 'Kode lisensi diperlukan.' });
 
   try {
+    await connectDB();
     const row = await License.findOne({ code: code.trim().toUpperCase() });
     if (!row) return res.status(404).json({ success: false, message: 'Lisensi tidak valid.' });
     if (row.status !== 'active') return res.status(403).json({ success: false, message: 'Lisensi dinonaktifkan.' });
@@ -516,6 +518,7 @@ app.post('/api/login-premium', async (req, res) => {
   if (!code || !email) return res.status(400).json({ success: false, message: 'Kode & email diperlukan.' });
 
   try {
+    await connectDB();
     const row = await License.findOne({ code: code.trim().toUpperCase(), type: 'premium' });
     if (!row) return res.status(404).json({ success: false, message: 'Lisensi tidak ditemukan.' });
     if (row.owner_email.toLowerCase() === email.trim().toLowerCase()) {
