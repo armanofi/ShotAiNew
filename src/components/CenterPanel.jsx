@@ -43,6 +43,7 @@ export default function CenterPanel() {
       <div style={{ flex: 1, backgroundColor: 'white', overflow: 'hidden' }}>
         <webview
           key={`${activeAccount.toolName}-${activeAccount.accountId}`}
+          partition={`persist:${activeAccount.toolName}-${activeAccount.accountId}`}
           src={activeAccount.url}
           style={{ width: '100%', height: '100%', display: 'flex' }}
           title={activeAccount.toolName}
