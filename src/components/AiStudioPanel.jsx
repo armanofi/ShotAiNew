@@ -3,10 +3,11 @@ import { useAppStore } from '../store/useAppStore';
 import { 
   Search, Settings, BookOpen, Video, Scissors, 
   Mic, Camera, Palette, Box, Image as ImageIcon, 
-  Share2, Zap, ArrowLeft, ChevronRight, Key
+  Share2, Zap, ArrowLeft, ChevronRight, Key, Music
 } from 'lucide-react';
 import ApiKeyModal from './ApiKeyModal';
 import ApiWebviewOverlay from './ApiWebviewOverlay';
+import AudioToStoryboard from './AudioToStoryboard';
 
 const studioTools = [
   { id: 'storyboard', name: 'Storyboard Maker', desc: 'Alur scene', icon: BookOpen, color: '#60a5fa', bg: 'rgba(96,165,250,0.12)' },
@@ -19,6 +20,7 @@ const studioTools = [
   { id: 'photographer', name: 'Fotografer AI', desc: 'Foto gaya pro', icon: ImageIcon, color: '#22d3ee', bg: 'rgba(34,211,238,0.12)' },
   { id: 'affiliate', name: 'Affiliate Kit', desc: 'Caption & skrip', icon: Share2, color: '#34d399', bg: 'rgba(52,211,153,0.12)' },
   { id: 'prompt-video', name: 'Prompt Video', desc: 'Prompt video AI', icon: Zap, color: '#fb7185', bg: 'rgba(251,113,133,0.12)' },
+  { id: 'audio-to-storyboard', name: 'Audio to Lyrics', desc: 'Lagu jadi lirik', icon: Music, color: '#f59e0b', bg: 'rgba(245,158,11,0.12)' },
 ];
 
 function ToolGrid({ onSelect }) {
@@ -106,6 +108,12 @@ function ToolDetail({ tool, onBack }) {
         <h4 className="text-lg font-semibold text-white mb-2">{tool.name}</h4>
         <p className="text-slate-400 text-sm mb-6">{tool.desc}</p>
         
+        {tool.id === 'audio-to-storyboard' && (
+          <div className="w-full">
+            <AudioToStoryboard />
+          </div>
+        )}
+
         {tool.id === 'storyboard' && (
           <div className="w-full text-left border rounded-xl p-4" style={{ borderColor: '#334155', backgroundColor: '#1e293b' }}>
             <h5 className="font-medium mb-3 text-sm text-slate-300 flex items-center gap-2">
