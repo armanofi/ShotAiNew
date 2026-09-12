@@ -133,24 +133,32 @@ export default function AiStudioPanel() {
   const closeStudioTool = useAppStore(state => state.closeStudioTool);
   const setStudioView = useAppStore(state => state.setStudioView);
   
-  const [hasApiKey, setHasApiKey] = useState(true);
-  const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
-  const [isWebviewOpen, setIsWebviewOpen] = useState(false);
-
-  useEffect(() => {
-    // Check if any API key exists (new format: array of keys)
+  // Helper: re-read API key state from localStorage
+  const checkApiKey = () => {
     const keysRaw = localStorage.getItem('google_ai_studio_keys');
     if (keysRaw) {
       try {
         const keys = JSON.parse(keysRaw);
-        setHasApiKey(Array.isArray(keys) && keys.length > 0);
-        return;
+        if (Array.isArray(keys) && keys.length > 0) {
+          setHasApiKey(true);
+          return;
+        }
       } catch {}
     }
     // Fallback: old single key format
     const oldKey = localStorage.getItem('google_ai_studio_key');
-    setHasApiKey(!!oldKey);
-  }, []);
+    setHasApiKey(!!oldKey && oldKey.trim() !== '');
+  };
+
+  useEffect(() => {
+    // Check on every mount (also when returning from Storyboard Maker)
+    checkApiKey();
+
+    // Also listen for storage changes (when key saved in modal)
+    const onStorage = () => checkApiKey();
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, [activeStudioTool]); // re-run when navigating between tools
   
   const activeToolObj = activeStudioTool 
     ? studioTools.find(t => t.id === activeStudioTool) 
@@ -165,6 +173,7 @@ export default function AiStudioPanel() {
     setHasApiKey(true);
     setIsWebviewOpen(false);
     setIsApiKeyModalOpen(false);
+    checkApiKey(); // immediately re-validate
   };
 
   // Missing API Key View
