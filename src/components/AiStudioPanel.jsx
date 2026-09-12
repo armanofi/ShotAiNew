@@ -89,7 +89,7 @@ function ToolDetail({ tool, onBack }) {
   if (tool.id === 'tiktok-dl') {
     return (
       <div className="flex flex-col h-full" style={{ backgroundColor: '#060e1c' }}>
-        <VideoKaraoke />
+        <VideoKaraoke onBack={onBack} />
       </div>
     );
   }

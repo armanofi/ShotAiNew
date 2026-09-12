@@ -3,7 +3,7 @@
   "author": "Epik Dunia Studio",
   "description": "ShotAi Application",
   "private": true,
-  "version": "1.0.2",
+  "version": "1.0.3",
   "main": "electron/main.cjs",
   "scripts": {
     "dev": "node server/index.js",
@@ -16,11 +16,12 @@
   "build": {
     "appId": "com.shotai.app",
     "productName": "ShotAi",
+    "compression": "store",
     "directories": {
       "output": "dist_electron"
     },
     "win": {
-      "target": "nsis",
+      "target": "portable",
       "icon": "build/icon.png"
     },
     "nsis": {
@@ -44,10 +45,27 @@
     ]
   },
   "dependencies": {
+    "electron-updater": "^6.8.9"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.21.0",
+    "@types/react": "^19.0.10",
+    "@types/react-dom": "^19.0.4",
+    "@vitejs/plugin-react": "^4.3.4",
+    "concurrently": "^9.1.2",
+    "cross-env": "^7.0.3",
+    "electron": "^34.2.0",
+    "electron-builder": "^25.1.8",
+    "eslint": "^9.21.0",
+    "eslint-plugin-react-hooks": "^5.1.0",
+    "eslint-plugin-react-refresh": "^0.4.19",
+    "globals": "^15.15.0",
+    "oxlint": "^0.15.11",
+    "vite": "^6.2.0",
+    "wait-on": "^8.0.2",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
-    "electron-updater": "^6.8.9",
     "express": "^5.2.1",
     "google-auth-library": "^11.0.2",
     "jsonwebtoken": "^9.0.3",
@@ -56,9 +74,7 @@
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-resizable-panels": "^4.12.4",
-    "zustand": "^5.0.15"
-  },
-  "devDependencies": {
+    "zustand": "^5.0.15",
     "@tailwindcss/postcss": "^4.3.3",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",

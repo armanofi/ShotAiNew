@@ -310,9 +310,9 @@ function KaraokePreview({ preset, aspectRatio, font, lines, currentTime, isPlayi
 
   const renderLine = (line, isCurrent, fillPct) => {
     if (!line) return null;
-    const words = line.text.split(' ');
-    const total = words.length;
-    const filledWords = Math.floor((fillPct / 100) * (total + 0.5));
+    const chars = line.text.split('');
+    const total = chars.length;
+    const filledChars = Math.floor((fillPct / 100) * (total + 0.5));
 
     return (
       <div style={{
@@ -325,13 +325,13 @@ function KaraokePreview({ preset, aspectRatio, font, lines, currentTime, isPlayi
         transition: 'opacity 0.4s, font-size 0.3s',
         padding: '2px 0',
       }}>
-        {isCurrent ? words.map((word, wi) => (
-          <span key={wi} style={{
-            color: wi < filledWords ? (preset?.fillColor || '#fbbf24') : (preset?.fontColor || '#f8fafc'),
-            transition: 'color 0.15s',
-            textShadow: wi < filledWords ? `0 0 12px ${preset?.fillColor || '#fbbf24'}60` : 'none',
+        {isCurrent ? chars.map((char, ci) => (
+          <span key={ci} style={{
+            color: ci < filledChars ? (preset?.fillColor || '#fbbf24') : (preset?.fontColor || '#f8fafc'),
+            transition: 'color 0.1s',
+            textShadow: ci < filledChars ? `0 0 12px ${preset?.fillColor || '#fbbf24'}60` : 'none',
           }}>
-            {word}{wi < total - 1 ? ' ' : ''}
+            {char}
           </span>
         )) : (
           <span style={{ color: preset?.fontColor || '#f8fafc' }}>{line.text}</span>
@@ -456,7 +456,7 @@ function AudioPlayerBar({ audioUrl, isPlaying, currentTime, duration, onPlayPaus
 }
 
 /* ─── Main Component ─────────────────────────────────────────── */
-export default function VideoKaraoke() {
+export default function VideoKaraoke({ onBack }) {
   // ── Step / Screen state
   const [screen, setScreen] = useState('input'); // 'input' | 'generating' | 'editor'
   const [generateStep, setGenerateStep] = useState(0);
@@ -486,6 +486,20 @@ export default function VideoKaraoke() {
   const [aspectRatio, setAspectRatio] = useState('16:9');
   const [font, setFont] = useState('Poppins');
   const [lines, setLines] = useState([]);
+  const [lyricsVersions, setLyricsVersions] = useState([
+    { id: 1, name: 'Versi 1', lines: [] },
+    { id: 2, name: 'Versi 2', lines: [] },
+    { id: 3, name: 'Versi 3', lines: [] },
+    { id: 4, name: 'Versi 4', lines: [] },
+    { id: 5, name: 'Versi 5', lines: [] },
+  ]);
+  const [activeVersion, setActiveVersion] = useState(1);
+  const switchVersion = (newId) => {
+    setLyricsVersions(prev => prev.map(v => v.id === activeVersion ? { ...v, lines: lines } : v));
+    const nextV = lyricsVersions.find(v => v.id === newId);
+    setLines(nextV ? nextV.lines : []);
+    setActiveVersion(newId);
+  };
   const [stems, setStems] = useState([
     { id: 'original',    label: 'Original',    color: '#60a5fa', volume: 100, muted: false },
     { id: 'instrumental',label: 'Instrumental', color: '#4ade80', volume: 80,  muted: false },
@@ -759,7 +773,20 @@ Aturan:
     let p = 0;
     const iv = setInterval(() => {
       p += Math.random() * 12 + 5;
-      if (p >= 100) { p = 100; clearInterval(iv); setTimeout(() => setExporting(false), 600); }
+      if (p >= 100) { 
+        p = 100; 
+        clearInterval(iv); 
+        setTimeout(() => {
+          setExporting(false);
+          // Show alert & download json
+          const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(lines, null, 2));
+          const dlAnchorElem = document.createElement('a');
+          dlAnchorElem.setAttribute("href", dataStr);
+          dlAnchorElem.setAttribute("download", `${title || 'karaoke'}_lyrics.json`);
+          dlAnchorElem.click();
+          alert("Hasil video & lirik berhasil disimpan!");
+        }, 600); 
+      }
       setExportProgress(Math.min(100, p));
     }, 300);
   };
@@ -772,6 +799,9 @@ Aturan:
         {/* Header */}
         <div style={{ padding: '20px 20px 0', flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
+            <button onClick={onBack} style={{ padding: '8px', borderRadius: '10px', border: 'none', backgroundColor: '#1e293b', color: '#94a3b8', cursor: 'pointer' }}>
+              <ArrowLeft size={16} />
+            </button>
             <div style={{ padding: '8px', borderRadius: '10px', background: 'linear-gradient(135deg,#7c3aed,#3b82f6)', color: 'white' }}>
               <Music2 size={18} />
             </div>
@@ -1196,16 +1226,15 @@ Aturan:
             </Section>
             <Section title="Versi Lirik">
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                {['Versi 1 (aktif)', 'Versi 2 (cadangan)'].map((v, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 10px', borderRadius: '8px', backgroundColor: '#0a111f', border: `1px solid ${i === 0 ? '#334155' : '#1e293b'}` }}>
-                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: i === 0 ? '#22c55e' : '#334155', flexShrink: 0 }} />
-                    <span style={{ flex: 1, fontSize: '11px', color: i === 0 ? '#cbd5e1' : '#475569' }}>{v}</span>
-                    {i === 0 && <CheckCircle2 size={12} color="#22c55e" />}
+                {[1, 2, 3, 4, 5].map((vId) => {
+                  const isActive = activeVersion === vId;
+                  return (
+                  <div key={vId} onClick={() => switchVersion(vId)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 10px', borderRadius: '8px', backgroundColor: isActive ? 'rgba(96,165,250,0.08)' : '#0a111f', border: `1px solid ${isActive ? '#60a5fa' : '#1e293b'}`, cursor: 'pointer' }}>
+                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: isActive ? '#60a5fa' : '#334155', flexShrink: 0 }} />
+                    <span style={{ flex: 1, fontSize: '11px', color: isActive ? '#93c5fd' : '#475569' }}>Versi {vId} {isActive ? '(aktif)' : ''}</span>
+                    {isActive && <CheckCircle2 size={12} color="#60a5fa" />}
                   </div>
-                ))}
-                <button style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px', borderRadius: '8px', border: '1.5px dashed #1e293b', background: 'none', cursor: 'pointer', color: '#475569', fontSize: '11px', justifyContent: 'center' }}>
-                  <Plus size={12} /> Simpan versi baru
-                </button>
+                )})}
               </div>
             </Section>
           </>
