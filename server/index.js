@@ -1,12 +1,16 @@
-require('dotenv').config();
+﻿require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const { OAuth2Client } = require('google-auth-library');
 const connectDB = require('./db');
 const License = require('./models/License');
 const User = require('./models/User');
+
+const GOOGLE_CLIENT_ID = '677784266542-sbtufl9691u1aliv8poqo399hjo6282p.apps.googleusercontent.com';
+const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
 
 // Helper: get Gravatar URL from email
 function gravatarUrl(email) {
@@ -213,86 +217,102 @@ app.get('/login', (req, res) => {
     }
   }
 
-  const html = `
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Masuk - ShotAi</title>
-        <script src="https://cdn.tailwindcss.com"><\/script>
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-        <style>body { font-family: 'Inter', sans-serif; }</style>
-    </head>
-    <body class="bg-gray-50 min-h-screen flex items-center justify-center">
-        <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border border-gray-100">
-            <div class="text-center mb-8">
-                <div class="w-14 h-14 rounded-2xl bg-black mx-auto flex items-center justify-center mb-4">
-                    <div class="w-7 h-7 rounded-lg" style="background: linear-gradient(135deg, #4f46e5, #ec4899, #eab308);"></div>
-                </div>
-                <h1 class="text-2xl font-bold text-gray-900">Selamat Datang</h1>
-                <p class="text-gray-500 text-sm mt-2">Masuk untuk melanjutkan ke ShotAi</p>
-            </div>
-            
-            <form id="loginForm" class="space-y-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                    <input type="email" id="email" required class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition" placeholder="email@contoh.com">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                    <input type="password" id="password" required class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition" placeholder="••••••••">
-                </div>
-                <button type="submit" id="submitBtn" class="w-full bg-[#3b5bdb] hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition shadow-md mt-2">
-                    Masuk
-                </button>
-                <div id="errorMsg" class="text-red-500 text-sm text-center hidden mt-2"></div>
-            </form>
-            <div class="mt-6 text-center">
-                <a href="/" class="text-sm text-gray-500 hover:text-gray-900">← Kembali ke Halaman Utama</a>
-            </div>
-        </div>
+  const GOOGLE_CLIENT_ID_HTML = '677784266542-sbtufl9691u1aliv8poqo399hjo6282p.apps.googleusercontent.com';
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Masuk - ShotAi</title>
+  <script src="https://cdn.tailwindcss.com"><\/script>
+  <script src="https://accounts.google.com/gsi/client" async defer><\/script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%); }
+    .glass { background: rgba(255,255,255,0.05); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.10); }
+    .g-btn { display:flex; align-items:center; justify-content:center; gap:10px; width:100%; padding:12px 16px; border-radius:10px; border:1px solid rgba(255,255,255,0.15); background:rgba(255,255,255,0.08); color:white; font-weight:600; font-size:14px; cursor:pointer; transition:all .2s; }
+    .g-btn:hover { background:rgba(255,255,255,0.16); }
+    .inp { width:100%; padding:11px 14px; border-radius:10px; border:1px solid rgba(255,255,255,0.15); background:rgba(255,255,255,0.07); color:white; font-size:14px; outline:none; transition:border .2s; }
+    .inp:focus { border-color:#6366f1; box-shadow:0 0 0 3px rgba(99,102,241,.2); }
+    .inp::placeholder { color:rgba(255,255,255,.3); }
+    .lbl { display:block; font-size:12px; font-weight:600; color:rgba(255,255,255,.6); margin-bottom:6px; text-transform:uppercase; letter-spacing:.05em; }
+    .submit-btn { width:100%; padding:13px; border-radius:10px; border:none; background:linear-gradient(135deg,#4F7FFF,#7C3AED); color:white; font-weight:700; font-size:14px; cursor:pointer; transition:opacity .2s; }
+    .submit-btn:hover { opacity:.9; }
+    .divider { display:flex; align-items:center; gap:12px; margin:20px 0; }
+    .divider::before,.divider::after { content:''; flex:1; height:1px; background:rgba(255,255,255,.1); }
+    .divider span { color:rgba(255,255,255,.3); font-size:12px; }
+  </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+  <div class="glass w-full max-w-md rounded-2xl p-8">
+    <div class="text-center mb-8">
+      <div class="w-14 h-14 rounded-2xl mx-auto flex items-center justify-center mb-4" style="background:linear-gradient(135deg,#4F7FFF,#7C3AED);box-shadow:0 0 30px rgba(124,58,237,.4)">
+        <span style="font-size:22px;font-weight:900;color:white;letter-spacing:-1px">SA</span>
+      </div>
+      <h1 class="text-2xl font-bold text-white">Selamat Datang</h1>
+      <p class="text-gray-400 text-sm mt-1">Masuk untuk melanjutkan ke ShotAI</p>
+    </div>
 
-        <script>
-            document.getElementById('loginForm').addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const email = document.getElementById('email').value;
-                const password = document.getElementById('password').value;
-                const errorDiv = document.getElementById('errorMsg');
-                const btn = document.getElementById('submitBtn');
-                btn.textContent = 'Memproses...';
-                btn.disabled = true;
-                
-                try {
-                    const res = await fetch('/api/login', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ email, password })
-                    });
-                    const data = await res.json();
-                    
-                    if(data.success) {
-                        window.location.href = data.redirect || '/';
-                    } else {
-                        errorDiv.textContent = data.message;
-                        errorDiv.classList.remove('hidden');
-                        btn.textContent = 'Masuk';
-                        btn.disabled = false;
-                    }
-                } catch(err) {
-                    errorDiv.textContent = 'Terjadi kesalahan jaringan';
-                    errorDiv.classList.remove('hidden');
-                    btn.textContent = 'Masuk';
-                    btn.disabled = false;
-                }
-            });
-        <\/script>
-    </body>
-    </html>
-  `;
+    <button class="g-btn" id="googleBtn" onclick="doGoogleLogin()">
+      <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+      Masuk dengan Google
+    </button>
+
+    <div class="divider"><span>atau masuk dengan email</span></div>
+
+    <form id="loginForm" class="space-y-4">
+      <div><label class="lbl">Email</label><input type="email" id="email" class="inp" placeholder="email@contoh.com" required></div>
+      <div><label class="lbl">Password</label><input type="password" id="password" class="inp" placeholder="••••••••" required></div>
+      <button type="submit" id="submitBtn" class="submit-btn">Masuk</button>
+      <div id="errorMsg" class="text-red-400 text-sm text-center hidden"></div>
+    </form>
+
+    <div class="mt-6 text-center">
+      <a href="/" class="text-sm text-gray-500 hover:text-gray-300 transition">← Kembali ke Halaman Utama</a>
+    </div>
+  </div>
+
+  <script>
+    const CLIENT_ID = '${GOOGLE_CLIENT_ID_HTML}';
+
+    function doGoogleLogin() {
+      const btn = document.getElementById('googleBtn');
+      btn.disabled = true;
+      btn.textContent = 'Menghubungkan ke Google...';
+      google.accounts.id.initialize({
+        client_id: CLIENT_ID,
+        callback: async (response) => {
+          try {
+            const res = await fetch('/api/google-login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ credential: response.credential }) });
+            const data = await res.json();
+            if (data.success) { window.location.href = data.redirect || '/'; }
+            else { alert(data.message || 'Login gagal'); btn.disabled=false; btn.textContent='Masuk dengan Google'; }
+          } catch(e) { alert('Kesalahan jaringan'); btn.disabled=false; }
+        },
+        ux_mode: 'popup'
+      });
+      google.accounts.id.prompt();
+    }
+
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const errorDiv = document.getElementById('errorMsg');
+      const btn = document.getElementById('submitBtn');
+      btn.textContent = 'Memproses...'; btn.disabled = true;
+      try {
+        const res = await fetch('/api/login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email, password }) });
+        const data = await res.json();
+        if(data.success) { window.location.href = data.redirect || '/'; }
+        else { errorDiv.textContent = data.message; errorDiv.classList.remove('hidden'); btn.textContent='Masuk'; btn.disabled=false; }
+      } catch(err) { errorDiv.textContent='Terjadi kesalahan jaringan'; errorDiv.classList.remove('hidden'); btn.textContent='Masuk'; btn.disabled=false; }
+    });
+  <\/script>
+</body>
+</html>`;
   res.send(html);
 });
-
 // 3. Login API Endpoint
 app.post('/api/login', async (req, res) => {
   const { email, password } = req.body;
@@ -394,6 +414,56 @@ app.post('/api/update-profile', async (req, res) => {
     res.json({ success: true, message: 'Profil diperbarui' });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// 3d. Google OAuth Login
+app.post('/api/google-login', async (req, res) => {
+  const { credential } = req.body;
+  if (!credential) return res.status(400).json({ success: false, message: 'Token Google tidak ditemukan.' });
+
+  try {
+    await connectDB();
+
+    // Verify Google ID token
+    const ticket = await googleClient.verifyIdToken({
+      idToken: credential,
+      audience: GOOGLE_CLIENT_ID,
+    });
+    const payload = ticket.getPayload();
+    const { email, name, picture, sub: googleId } = payload;
+
+    if (!email) return res.status(400).json({ success: false, message: 'Email tidak ditemukan dari akun Google.' });
+
+    // Upsert user: create if not exists, update profile if exists
+    const user = await User.findOneAndUpdate(
+      { email: email.toLowerCase() },
+      {
+        $set: {
+          name: name || email.split('@')[0],
+          avatarUrl: picture || gravatarUrl(email),
+        },
+        $setOnInsert: {
+          password: `google_${googleId}`,
+          role: 'user',
+        }
+      },
+      { upsert: true, new: true }
+    );
+
+    // Generate JWT token
+    const token = jwt.sign({ id: user._id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
+    res.cookie('admin_token', token, {
+      httpOnly: true,
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+    });
+
+    const redirect = user.role === 'superadmin' ? '/admin' : '/';
+    res.json({ success: true, redirect, profile: { name: user.name, email: user.email, avatarUrl: user.avatarUrl } });
+  } catch (err) {
+    console.error('Google login error:', err.message);
+    res.status(401).json({ success: false, message: 'Token Google tidak valid: ' + err.message });
   }
 });
 
