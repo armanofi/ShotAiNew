@@ -44,18 +44,20 @@ function createWindow() {
   // ──────────────────────────────────────────────────────────────
   // RIGHT-CLICK CONTEXT MENU
   // ──────────────────────────────────────────────────────────────
-  mainWindow.webContents.on('context-menu', (event, params) => {
-    const contextMenu = Menu.buildFromTemplate([
-      { label: 'Potong (Cut)', role: 'cut', enabled: params.editFlags.canCut },
-      { label: 'Salin (Copy)', role: 'copy', enabled: params.editFlags.canCopy },
-      { label: 'Tempel (Paste)', role: 'paste', enabled: params.editFlags.canPaste },
-      { type: 'separator' },
-      { label: 'Pilih Semua', role: 'selectAll' },
-      { type: 'separator' },
-      { label: 'Muat Ulang', role: 'reload' },
-      { label: 'Inspect Element', click: () => { mainWindow.webContents.inspectElement(params.x, params.y); } },
-    ]);
-    contextMenu.popup();
+  app.on('web-contents-created', (e, contents) => {
+    contents.on('context-menu', (event, params) => {
+      const contextMenu = Menu.buildFromTemplate([
+        { label: 'Potong (Cut)', role: 'cut', enabled: params.editFlags.canCut },
+        { label: 'Salin (Copy)', role: 'copy', enabled: params.editFlags.canCopy },
+        { label: 'Tempel (Paste)', role: 'paste', enabled: params.editFlags.canPaste },
+        { type: 'separator' },
+        { label: 'Pilih Semua', role: 'selectAll' },
+        { type: 'separator' },
+        { label: 'Muat Ulang', role: 'reload' },
+        { label: 'Inspect Element', click: () => { contents.inspectElement(params.x, params.y); } },
+      ]);
+      contextMenu.popup();
+    });
   });
 
   // When main window is ready to show, close splash and show main
