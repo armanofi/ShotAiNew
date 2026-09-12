@@ -100,18 +100,18 @@ export const useStoryboardStore = create((set, get) => ({
     if (!lyrics || !videoModel) return;
 
     // Get API Key
-    const keysRaw = localStorage.getItem('google_ai_studio_keys');
-    const oldKey = localStorage.getItem('google_ai_studio_key');
-    let apiKey = '';
+    let apiKey = localStorage.getItem('google_ai_studio_key') || '';
     
-    if (keysRaw) {
-      try {
-        const keys = JSON.parse(keysRaw);
-        if (Array.isArray(keys) && keys.length > 0) apiKey = keys[0].key;
-      } catch (e) {}
+    // Fallback if not found in single key (try old array format)
+    if (!apiKey) {
+      const keysRaw = localStorage.getItem('google_ai_studio_keys');
+      if (keysRaw) {
+        try {
+          const keys = JSON.parse(keysRaw);
+          if (Array.isArray(keys) && keys.length > 0 && keys[0].key) apiKey = keys[0].key;
+        } catch (e) {}
+      }
     }
-    if (!apiKey && oldKey) apiKey = oldKey;
-
     if (!apiKey) {
       alert("API Key Google AI Studio belum diatur. Silakan atur di pengaturan AI Studio.");
       return;
@@ -159,7 +159,8 @@ DILARANG ADA TEKS LAIN SELAIN JSON!`;
 
         const userPrompt = `Lirik per scene:\n${baseScenes.map(s => `Scene ${s.id}: "${s.lyrics}"`).join('\n')}`;
 
-        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+        const safeKey = encodeURIComponent(apiKey.trim());
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${safeKey}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
