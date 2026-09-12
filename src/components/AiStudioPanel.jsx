@@ -133,6 +133,10 @@ export default function AiStudioPanel() {
   const closeStudioTool = useAppStore(state => state.closeStudioTool);
   const setStudioView = useAppStore(state => state.setStudioView);
   
+  const [hasApiKey, setHasApiKey] = useState(true);
+  const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
+  const [isWebviewOpen, setIsWebviewOpen] = useState(false);
+
   // Helper: re-read API key state from localStorage
   const checkApiKey = () => {
     const keysRaw = localStorage.getItem('google_ai_studio_keys');
