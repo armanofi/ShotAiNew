@@ -160,7 +160,7 @@ DILARANG ADA TEKS LAIN SELAIN JSON!`;
         const userPrompt = `Lirik per scene:\n${baseScenes.map(s => `Scene ${s.id}: "${s.lyrics}"`).join('\n')}`;
 
         const safeKey = apiKey.trim();
-        const model = 'gemini-2.0-flash';
+        const model = 'gemini-3.6-flash';
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${safeKey}`;
         console.log('[Storyboard] Calling Gemini API:', { model, keyPrefix: safeKey.substring(0, 8) + '...', urlLength: url.length });
         
