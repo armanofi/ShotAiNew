@@ -20,7 +20,7 @@ const studioTools = [
   { id: 'photographer', name: 'Fotografer AI', desc: 'Foto gaya pro', icon: ImageIcon, color: '#22d3ee', bg: 'rgba(34,211,238,0.12)' },
   { id: 'affiliate', name: 'Affiliate Kit', desc: 'Caption & skrip', icon: Share2, color: '#34d399', bg: 'rgba(52,211,153,0.12)' },
   { id: 'prompt-video', name: 'Prompt Video', desc: 'Prompt video AI', icon: Zap, color: '#fb7185', bg: 'rgba(251,113,133,0.12)' },
-  { id: 'audio-to-storyboard', name: 'Audio to Lyrics', desc: 'Lagu jadi lirik', icon: Music, color: '#f59e0b', bg: 'rgba(245,158,11,0.12)' },
+  { id: 'audio-to-storyboard', name: 'Audio to Storyboard', desc: 'Lagu jadi lirik', icon: Music, color: '#f59e0b', bg: 'rgba(245,158,11,0.12)' },
 ];
 
 function ToolGrid({ onSelect }) {
