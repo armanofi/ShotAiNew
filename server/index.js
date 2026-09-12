@@ -1,16 +1,23 @@
-﻿require('dotenv').config();
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
-const { OAuth2Client } = require('google-auth-library');
 const connectDB = require('./db');
 const License = require('./models/License');
 const User = require('./models/User');
 
 const GOOGLE_CLIENT_ID = '677784266542-sbtufl9691u1aliv8poqo399hjo6282p.apps.googleusercontent.com';
-const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
+
+// Verify Google ID token via Google's public endpoint (no native deps needed)
+async function verifyGoogleToken(credential) {
+  const res = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${credential}`);
+  if (!res.ok) throw new Error('Token tidak valid atau kadaluarsa');
+  const payload = await res.json();
+  if (payload.aud !== GOOGLE_CLIENT_ID) throw new Error('Token bukan untuk aplikasi ini');
+  return payload; // { email, name, picture, sub, ... }
+}
 
 // Helper: get Gravatar URL from email
 function gravatarUrl(email) {
@@ -425,12 +432,8 @@ app.post('/api/google-login', async (req, res) => {
   try {
     await connectDB();
 
-    // Verify Google ID token
-    const ticket = await googleClient.verifyIdToken({
-      idToken: credential,
-      audience: GOOGLE_CLIENT_ID,
-    });
-    const payload = ticket.getPayload();
+    // Verify Google ID token using lightweight fetch (no native deps)
+    const payload = await verifyGoogleToken(credential);
     const { email, name, picture, sub: googleId } = payload;
 
     if (!email) return res.status(400).json({ success: false, message: 'Email tidak ditemukan dari akun Google.' });
