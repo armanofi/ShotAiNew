@@ -8,10 +8,11 @@ import {
 import ApiKeyModal from './ApiKeyModal';
 import ApiWebviewOverlay from './ApiWebviewOverlay';
 import AudioToStoryboard from './AudioToStoryboard';
+import VideoKaraoke from './VideoKaraoke';
 
 const studioTools = [
   { id: 'storyboard', name: 'Storyboard Maker', desc: 'Alur scene', icon: BookOpen, color: '#60a5fa', bg: 'rgba(96,165,250,0.12)' },
-  { id: 'tiktok-dl', name: 'TikTok Downloader', desc: 'Tanpa watermark', icon: Video, color: '#f472b6', bg: 'rgba(244,114,182,0.12)' },
+  { id: 'tiktok-dl', name: 'Video Karaoke', desc: 'Lagu jadi karaoke', icon: Music, color: '#f472b6', bg: 'rgba(244,114,182,0.12)' },
   { id: 'split-video', name: 'Split Video', desc: 'Potong video', icon: Scissors, color: '#fb923c', bg: 'rgba(251,146,60,0.12)' },
   { id: 'voiceover', name: 'Voiceover', desc: 'Naskah jadi suara', icon: Mic, color: '#4ade80', bg: 'rgba(74,222,128,0.12)' },
   { id: 'product-photo', name: 'Foto Produk', desc: 'Prompt foto produk', icon: Camera, color: '#facc15', bg: 'rgba(250,204,21,0.12)' },
@@ -83,6 +84,16 @@ function ToolGrid({ onSelect }) {
 
 function ToolDetail({ tool, onBack }) {
   const Icon = tool.icon;
+
+  // Video Karaoke: full-height dedicated UI, no placeholder wrapper
+  if (tool.id === 'tiktok-dl') {
+    return (
+      <div className="flex flex-col h-full" style={{ backgroundColor: '#060e1c' }}>
+        <VideoKaraoke />
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-full" style={{ backgroundColor: '#0f172a' }}>
       <div className="flex items-center gap-3 p-4 border-b" style={{ borderColor: '#334155', backgroundColor: '#1e293b' }}>
