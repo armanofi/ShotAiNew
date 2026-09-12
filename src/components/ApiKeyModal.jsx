@@ -102,25 +102,53 @@ export default function ApiKeyModal({ isOpen, onClose, onGetApiKey }) {
                   <td style={{ padding: '12px', fontSize: '13px', color: displayStatusColor, fontWeight: savedKey ? 600 : 400, borderRight: '1px solid #cbd5e1' }}>{displayStatus}</td>
                   <td style={{ padding: '12px', fontSize: '13px', color: '#475569', borderRight: '1px solid #cbd5e1' }}>-</td>
                   <td style={{ padding: '10px' }}>
-                    <button
-                      onClick={onGetApiKey}
-                      style={{
-                        backgroundColor: '#3b82f6',
-                        color: 'white',
-                        border: 'none',
-                        padding: '8px 16px',
-                        borderRadius: '20px',
-                        fontSize: '12px',
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        boxShadow: '0 2px 4px rgba(59, 130, 246, 0.3)',
-                        transition: 'background-color 0.2s'
-                      }}
-                      onMouseEnter={e => e.currentTarget.style.backgroundColor = '#2563eb'}
-                      onMouseLeave={e => e.currentTarget.style.backgroundColor = '#3b82f6'}
-                    >
-                      {actionText}
-                    </button>
+                    <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
+                      <button
+                        onClick={onGetApiKey}
+                        style={{
+                          backgroundColor: '#3b82f6',
+                          color: 'white',
+                          border: 'none',
+                          padding: '8px 16px',
+                          borderRadius: '20px',
+                          fontSize: '12px',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          boxShadow: '0 2px 4px rgba(59, 130, 246, 0.3)',
+                          transition: 'background-color 0.2s'
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.backgroundColor = '#2563eb'}
+                        onMouseLeave={e => e.currentTarget.style.backgroundColor = '#3b82f6'}
+                      >
+                        {actionText}
+                      </button>
+                      {savedKey && (
+                        <button
+                          onClick={() => {
+                            if (window.confirm('Yakin ingin menghapus API key ini?')) {
+                              localStorage.removeItem('google_ai_studio_key');
+                              localStorage.removeItem('google_ai_studio_keys');
+                              setSavedKey(null);
+                            }
+                          }}
+                          style={{
+                            backgroundColor: '#fef2f2',
+                            color: '#ef4444',
+                            border: '1px solid #fecaca',
+                            padding: '8px 14px',
+                            borderRadius: '20px',
+                            fontSize: '12px',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            transition: 'background-color 0.2s'
+                          }}
+                          onMouseEnter={e => e.currentTarget.style.backgroundColor = '#fee2e2'}
+                          onMouseLeave={e => e.currentTarget.style.backgroundColor = '#fef2f2'}
+                        >
+                          🗑 Hapus
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               </tbody>

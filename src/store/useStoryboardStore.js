@@ -159,8 +159,12 @@ DILARANG ADA TEKS LAIN SELAIN JSON!`;
 
         const userPrompt = `Lirik per scene:\n${baseScenes.map(s => `Scene ${s.id}: "${s.lyrics}"`).join('\n')}`;
 
-        const safeKey = encodeURIComponent(apiKey.trim());
-        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${safeKey}`, {
+        const safeKey = apiKey.trim();
+        const model = 'gemini-2.0-flash';
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${safeKey}`;
+        console.log('[Storyboard] Calling Gemini API:', { model, keyPrefix: safeKey.substring(0, 8) + '...', urlLength: url.length });
+        
+        const res = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -174,7 +178,11 @@ DILARANG ADA TEKS LAIN SELAIN JSON!`;
           })
         });
 
-        if (!res.ok) throw new Error(`Gemini API Error: ${res.status}`);
+        if (!res.ok) {
+          const errorBody = await res.text();
+          console.error('[Storyboard] Gemini API Error:', res.status, errorBody);
+          throw new Error(`Gemini API Error ${res.status}: ${errorBody.substring(0, 200)}`);
+        }
         
         const data = await res.json();
         const jsonText = data.candidates?.[0]?.content?.parts?.[0]?.text;
