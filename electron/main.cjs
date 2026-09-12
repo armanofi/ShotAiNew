@@ -1,4 +1,4 @@
-const { app, BrowserWindow, session } = require('electron');
+const { app, BrowserWindow, session, ipcMain, shell } = require('electron');
 const path = require('path');
 
 const isDev = process.env.NODE_ENV === 'development';
@@ -42,11 +42,33 @@ function createWindow() {
 
   // When main window is ready to show, close splash and show main
   mainWindow.once('ready-to-show', () => {
-    // Add an artificial small delay so the user sees the splash screen
     setTimeout(() => {
       splash.destroy();
       mainWindow.show();
     }, 1500);
+  });
+
+  // ──────────────────────────────────────────────────────────────
+  // IPC: Open AI Studio in a real popup window (fixes black screen)
+  // ──────────────────────────────────────────────────────────────
+  ipcMain.handle('open-ai-studio-window', (event, url) => {
+    const studioWin = new BrowserWindow({
+      width: 1100,
+      height: 750,
+      title: 'Google AI Studio',
+      autoHideMenuBar: true,
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true,
+        // Use a named partition so Google login session is remembered
+        partition: 'persist:aistudio',
+      }
+    });
+
+    studioWin.loadURL(url || 'https://aistudio.google.com/app/apikey');
+    studioWin.setMenuBarVisibility(false);
+
+    return true;
   });
 
   if (isDev) {
