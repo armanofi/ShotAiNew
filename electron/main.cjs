@@ -1,4 +1,4 @@
-const { app, BrowserWindow, session, ipcMain, shell, dialog } = require('electron');
+const { app, BrowserWindow, session, ipcMain, shell, dialog, Menu } = require('electron');
 const path = require('path');
 const { autoUpdater } = require('electron-updater');
 
@@ -39,6 +39,23 @@ function createWindow() {
   // Allow all permission requests (microphone, camera, notifications etc)
   mainWindow.webContents.session.setPermissionRequestHandler((webContents, permission, callback) => {
     callback(true);
+  });
+
+  // ──────────────────────────────────────────────────────────────
+  // RIGHT-CLICK CONTEXT MENU
+  // ──────────────────────────────────────────────────────────────
+  mainWindow.webContents.on('context-menu', (event, params) => {
+    const contextMenu = Menu.buildFromTemplate([
+      { label: 'Potong (Cut)', role: 'cut', enabled: params.editFlags.canCut },
+      { label: 'Salin (Copy)', role: 'copy', enabled: params.editFlags.canCopy },
+      { label: 'Tempel (Paste)', role: 'paste', enabled: params.editFlags.canPaste },
+      { type: 'separator' },
+      { label: 'Pilih Semua', role: 'selectAll' },
+      { type: 'separator' },
+      { label: 'Muat Ulang', role: 'reload' },
+      { label: 'Inspect Element', click: () => { mainWindow.webContents.inspectElement(params.x, params.y); } },
+    ]);
+    contextMenu.popup();
   });
 
   // When main window is ready to show, close splash and show main

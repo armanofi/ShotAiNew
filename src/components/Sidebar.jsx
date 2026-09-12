@@ -390,6 +390,14 @@ export default function Sidebar() {
       {/* Bottom Buttons */}
       <div className="p-3 flex flex-col gap-2 flex-shrink-0" style={{ borderTop: '1px solid #1e293b' }}>
         <button
+          onClick={() => {
+            const waUrl = 'https://wa.me/6285261475052';
+            if (window.require) {
+              window.require('electron').shell.openExternal(waUrl);
+            } else {
+              window.open(waUrl, '_blank');
+            }
+          }}
           className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold text-white transition-all shadow-lg"
           style={{ backgroundColor: '#22c55e', boxShadow: '0 4px 14px rgba(34,197,94,0.2)' }}
           onMouseEnter={e => e.currentTarget.style.backgroundColor = '#16a34a'}
