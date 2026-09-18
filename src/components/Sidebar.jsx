@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useAppStore } from '../store/useAppStore';
+import { useAppStore, SHOTAI_HOME_ACCOUNT } from '../store/useAppStore';
 import { ChevronRight, Plus, User } from 'lucide-react';
 import AddAccountModal from './AddAccountModal';
 
@@ -163,6 +163,22 @@ const ToolLogo = ({ name }) => {
         </svg>
       );
 
+    case 'ShotAi':
+      return (
+        <div
+          className="flex items-center justify-center rounded flex-shrink-0"
+          style={{
+            width: `${s}px`,
+            height: `${s}px`,
+            background: 'linear-gradient(135deg, #4F7FFF 0%, #7C3AED 100%)',
+            borderRadius: '4px',
+            boxShadow: '0 0 6px rgba(124,58,237,0.4)',
+          }}
+        >
+          <span className="text-white font-black text-[10px]" style={{ letterSpacing: '-0.5px' }}>SA</span>
+        </div>
+      );
+
     default:
       return <span style={{ fontSize: '16px' }}>🔧</span>;
   }
@@ -189,14 +205,14 @@ function ToolMenuItem({ tool, category, onAddClick }) {
           <ToolLogo name={tool.name} />
           <span className="text-sm font-medium text-slate-300 truncate">{tool.name}</span>
           <span className="text-xs px-1.5 py-0.5 rounded-full flex-shrink-0"
-            style={{ backgroundColor: '#1e293b', color: '#64748b' }}>
+            style={{ backgroundColor: '#18181b', color: '#a1a1aa', border: '1px solid #27272a' }}>
             {tool.accounts.length}
           </span>
         </div>
         <ChevronRight
           size={14}
           style={{
-            color: '#64748b',
+            color: '#71717a',
             transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
             transition: 'transform 0.2s ease',
             flexShrink: 0,
@@ -206,7 +222,7 @@ function ToolMenuItem({ tool, category, onAddClick }) {
 
       {/* Expanded accounts list */}
       {isExpanded && (
-        <div className="ml-4 mb-1" style={{ borderLeft: '1px solid #334155', paddingLeft: '8px' }}>
+        <div className="ml-4 mb-1" style={{ borderLeft: '1px solid #27272a', paddingLeft: '8px' }}>
           <button
             onClick={(e) => { e.stopPropagation(); onAddClick(tool.name, category); }}
             className="flex items-center gap-1.5 w-full text-left py-1.5 px-2 rounded-md text-xs transition-colors"
@@ -247,6 +263,7 @@ function ToolMenuItem({ tool, category, onAddClick }) {
                     e.stopPropagation();
                     if (window.confirm(`Hapus akun "${account.label}"?`)) {
                       removeAccount(category, tool.name, account.id);
+                      setActiveAccount(SHOTAI_HOME_ACCOUNT);
                     }
                   }}
                   title="Hapus akun"
@@ -317,6 +334,9 @@ export default function Sidebar() {
   const sosmedTools = useAppStore(state => state.sosmedTools);
   const risetProdukTools = useAppStore(state => state.risetProdukTools);
   const addAccount = useAppStore(state => state.addAccount);
+  const activeAccount = useAppStore(state => state.activeAccount);
+  const setActiveAccount = useAppStore(state => state.setActiveAccount);
+  const openShotAiPortal = useAppStore(state => state.openShotAiPortal);
 
   const [modalState, setModalState] = useState({ isOpen: false, toolName: '', category: '' });
 
@@ -328,35 +348,76 @@ export default function Sidebar() {
   const isPremium = licenseType === 'premium';
   const userName = localStorage.getItem('shotai_user_name') || (isPremium ? (localStorage.getItem('shotai_premium_email') || '').split('@')[0] : 'Pengguna');
   const userAvatar = localStorage.getItem('shotai_user_avatar') || '';
-  const userEmail = localStorage.getItem('shotai_premium_email') || '';
+
+  const isLogoActive = activeAccount?.url === 'https://shot-ai-new.vercel.app/' || (activeAccount?.toolName === 'ShotAi' && activeAccount?.accountId === 'portal');
+
+  const handleLogoClick = () => {
+    if (activeAccount?.url === 'https://shot-ai-new.vercel.app/') {
+      window.dispatchEvent(new CustomEvent('shotai-reload-portal'));
+    }
+    if (openShotAiPortal) {
+      openShotAiPortal();
+    } else {
+      setActiveAccount(SHOTAI_HOME_ACCOUNT);
+    }
+  };
 
   return (
     <div
       className="flex flex-col h-full flex-shrink-0"
-      style={{ width: '220px', backgroundColor: '#0f172a', borderRight: '1px solid #1e293b' }}
+      style={{ width: '220px', backgroundColor: '#111113', borderRight: '1px solid #27272a' }}
     >
-      {/* Logo */}
+      {/* Logo — Clicking opens ShotAi Web Portal */}
       <div
-        className="flex items-center gap-2.5 px-4 flex-shrink-0"
-        style={{ height: '52px', borderBottom: '1px solid #1e293b' }}
+        onClick={handleLogoClick}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleLogoClick(); }}
+        title="Buka ShotAi Web Portal (https://shot-ai-new.vercel.app/)"
+        className="flex items-center gap-2.5 px-4 flex-shrink-0 cursor-pointer select-none transition-all duration-200 group"
+        style={{
+          height: '52px',
+          borderBottom: '1px solid #27272a',
+          backgroundColor: isLogoActive ? 'rgba(79, 127, 255, 0.12)' : 'transparent',
+        }}
+        onMouseEnter={(e) => {
+          if (!isLogoActive) e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
+        }}
+        onMouseLeave={(e) => {
+          if (!isLogoActive) e.currentTarget.style.backgroundColor = 'transparent';
+        }}
       >
         <div
-          className="flex items-center justify-center rounded-lg flex-shrink-0"
+          className="flex items-center justify-center rounded-lg flex-shrink-0 transition-transform duration-200 group-hover:scale-105"
           style={{
             width: '32px', height: '32px',
             background: 'linear-gradient(135deg, #4F7FFF 0%, #7C3AED 100%)',
-            boxShadow: '0 0 14px rgba(124,58,237,0.5)',
+            boxShadow: isLogoActive ? '0 0 16px rgba(124,58,237,0.7)' : '0 0 14px rgba(124,58,237,0.4)',
             borderRadius: '8px',
           }}
         >
           <span className="text-white font-black text-sm" style={{ letterSpacing: '-0.5px' }}>SA</span>
         </div>
-        <span
-          className="font-bold text-lg"
-          style={{ background: 'linear-gradient(to right, #fff, #94a3b8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}
-        >
-          ShotAi
-        </span>
+        <div className="flex flex-col min-w-0">
+          <div className="flex items-center gap-1.5">
+            <span
+              className="font-bold text-lg leading-none"
+              style={{
+                background: 'linear-gradient(to right, #fff, #94a3b8)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+              }}
+            >
+              ShotAi
+            </span>
+            {isLogoActive && (
+              <span className="w-2 h-2 rounded-full bg-emerald-400 flex-shrink-0 shadow-sm shadow-emerald-500/50" title="Aktif" />
+            )}
+          </div>
+          <span className="text-[10px] text-slate-500 truncate leading-none mt-1 group-hover:text-blue-400 transition-colors">
+            shot-ai-new.vercel.app
+          </span>
+        </div>
       </div>
 
       {/* Nav */}
@@ -364,7 +425,7 @@ export default function Sidebar() {
         <CategorySection
           title="Workspace"
           icon="🗂️"
-          tools={workspaceTools}
+          tools={workspaceTools.filter(t => t.name.toLowerCase() !== 'shotai')}
           category="workspace"
           onAddClick={openAddModal}
           defaultOpen={true}
@@ -388,7 +449,7 @@ export default function Sidebar() {
       </div>
 
       {/* Bottom Buttons */}
-      <div className="p-3 flex flex-col gap-2 flex-shrink-0" style={{ borderTop: '1px solid #1e293b' }}>
+      <div className="p-3 flex flex-col gap-2 flex-shrink-0" style={{ borderTop: '1px solid #27272a' }}>
         <button
           onClick={() => {
             const waUrl = 'https://wa.me/6285261475052';
@@ -408,10 +469,10 @@ export default function Sidebar() {
         </button>
 
         {/* User Profile & Logout */}
-        <div className="flex items-center justify-between p-2 mt-1 rounded-xl transition-colors" style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid #1e293b' }}>
+        <div className="flex items-center justify-between p-2 mt-1 rounded-xl transition-colors" style={{ backgroundColor: '#18181b', border: '1px solid #27272a' }}>
           <div className="flex items-center gap-2 overflow-hidden">
             {/* Avatar */}
-            <div className="flex-shrink-0" style={{ width: '32px', height: '32px', borderRadius: '8px', overflow: 'hidden', border: isPremium ? '2px solid #6366f1' : '2px solid #334155' }}>
+            <div className="flex-shrink-0" style={{ width: '32px', height: '32px', borderRadius: '8px', overflow: 'hidden', border: isPremium ? '2px solid #6366f1' : '2px solid #27272a' }}>
               {userAvatar ? (
                 <img
                   src={userAvatar}

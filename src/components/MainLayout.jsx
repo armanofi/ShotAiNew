@@ -14,6 +14,17 @@ export default function MainLayout() {
   const isAiStudioOpen = useAppStore(state => state.isAiStudioOpen);
   const toggleAiStudio = useAppStore(state => state.toggleAiStudio);
   const studioView = useAppStore(state => state.studioView);
+  const [isRenderingVideo, setIsRenderingVideo] = useState(false);
+
+  useEffect(() => {
+    const handleRenderingEvent = (e) => {
+      setIsRenderingVideo(Boolean(e.detail?.isRendering));
+    };
+    window.addEventListener('ai-studio-rendering', handleRenderingEvent);
+    return () => {
+      window.removeEventListener('ai-studio-rendering', handleRenderingEvent);
+    };
+  }, []);
 
   const [studioWidth, setStudioWidth] = useState(() => {
     try {
@@ -85,7 +96,7 @@ export default function MainLayout() {
       width: '100vw',
       height: '100vh',
       overflow: 'hidden',
-      backgroundColor: '#060e1c',
+      backgroundColor: '#09090b',
       fontFamily: 'Inter, sans-serif',
       position: 'relative',
     }}>
@@ -115,79 +126,84 @@ export default function MainLayout() {
       </div>
 
       {/* Splitter + Right Panel */}
-      {isAiStudioOpen && (
-        <>
-          {/* Drag Handle */}
-          <div
-            onMouseDown={onSplitterMouseDown}
-            style={{
-              width: '5px',
-              flexShrink: 0,
-              height: '100%',
-              backgroundColor: '#0f1f35',
-              cursor: 'col-resize',
-              position: 'relative',
-              zIndex: 10,
-            }}
-            onMouseEnter={e => e.currentTarget.style.backgroundColor = '#3b82f6'}
-            onMouseLeave={e => e.currentTarget.style.backgroundColor = '#0f1f35'}
-          >
-            {/* grip dots */}
-            <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              {[0,1,2,3].map(i => (
-                <div key={i} style={{ width: '3px', height: '3px', borderRadius: '50%', backgroundColor: '#334155' }} />
-              ))}
-            </div>
-          </div>
+      <div
+        onMouseDown={onSplitterMouseDown}
+        style={{
+          width: '5px',
+          flexShrink: 0,
+          height: '100%',
+          backgroundColor: '#0f1f35',
+          cursor: 'col-resize',
+          position: 'relative',
+          zIndex: 10,
+          display: isAiStudioOpen ? 'block' : 'none',
+        }}
+        onMouseEnter={e => e.currentTarget.style.backgroundColor = '#3b82f6'}
+        onMouseLeave={e => e.currentTarget.style.backgroundColor = '#0f1f35'}
+      >
+        {/* grip dots */}
+        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          {[0,1,2,3].map(i => (
+            <div key={i} style={{ width: '3px', height: '3px', borderRadius: '50%', backgroundColor: '#334155' }} />
+          ))}
+        </div>
+      </div>
 
-          {/* Right Panel */}
-          <div
-            ref={rightPanelRef}
-            style={{
-              width: studioWidth,
-              flexShrink: 0,
-              height: '100%',
-              overflow: 'hidden',
-              borderLeft: '1px solid #0f1f35',
-            }}
-          >
-            <RightPanelContent />
-          </div>
-        </>
-      )}
+      {/* Right Panel - Always mounted to prevent losing state when closed */}
+      <div
+        ref={rightPanelRef}
+        style={{
+          width: isAiStudioOpen ? studioWidth : 0,
+          flexShrink: 0,
+          height: '100%',
+          overflow: 'hidden',
+          borderLeft: isAiStudioOpen ? '1px solid #0f1f35' : 'none',
+          display: isAiStudioOpen ? 'block' : 'none',
+        }}
+      >
+        <div style={{ display: studioView === 'storyboard' ? 'block' : 'none', height: '100%' }}>
+          <StoryboardMaker />
+        </div>
+        <div style={{ display: studioView !== 'storyboard' ? 'block' : 'none', height: '100%' }}>
+          <AiStudioPanel />
+        </div>
+      </div>
 
       {/* Toggle Tab Button — sticks to left edge of right panel */}
-      <div
-        ref={toggleBtnRef}
-        style={{
-          position: 'absolute',
-          right: isAiStudioOpen ? studioWidth + 5 : 0,
-          top: '50%',
-        transform: 'translateY(-50%)',
-        zIndex: 50,
-        pointerEvents: 'auto',
-      }}>
-        <button
-          onClick={toggleAiStudio}
+      {!isRenderingVideo && (
+        <div
+          ref={toggleBtnRef}
           style={{
-            writingMode: 'vertical-lr',
-            transform: 'rotate(180deg)',
-            padding: '24px 7px',
-            borderRadius: '0 8px 8px 0',
-            fontSize: '11px',
-            fontWeight: 700,
-            letterSpacing: '0.12em',
-            cursor: 'pointer',
-            border: 'none',
-            boxShadow: '-3px 0 16px rgba(0,0,0,0.5)',
-            backgroundColor: isAiStudioOpen ? '#ef4444' : '#10b981',
-            color: 'white',
-            transition: 'background-color 0.2s',
+            position: 'absolute',
+            right: isAiStudioOpen ? studioWidth + 5 : 0,
+            top: '50%',
+            transform: 'translateY(-50%)',
+            zIndex: 40,
+            pointerEvents: 'auto',
           }}
         >
-          {isAiStudioOpen ? 'TUTUP AI STUDIO' : 'BUKA AI STUDIO'}
-        </button>
-      </div>
+          <button
+            onClick={toggleAiStudio}
+            style={{
+              writingMode: 'vertical-lr',
+              transform: 'rotate(180deg)',
+              padding: '24px 7px',
+              borderRadius: '0 8px 8px 0',
+              fontSize: '11px',
+              fontWeight: 700,
+              letterSpacing: '0.12em',
+              cursor: 'pointer',
+              border: 'none',
+              boxShadow: '-3px 0 16px rgba(0,0,0,0.5)',
+              backgroundColor: isAiStudioOpen ? '#ef4444' : '#10b981',
+              color: 'white',
+              transition: 'background-color 0.2s',
+            }}
+          >
+            {isAiStudioOpen ? 'TUTUP AI STUDIO' : 'BUKA AI STUDIO'}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

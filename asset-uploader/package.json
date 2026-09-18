@@ -1,0 +1,21 @@
+{
+  "name": "shotai-asset-uploader",
+  "version": "1.0.0",
+  "description": "Windows Auto Scanner and Uploader for ShotAi Effects and Transitions",
+  "main": "uploader.js",
+  "scripts": {
+    "start": "node uploader.js"
+  },
+  "keywords": [
+    "shotai",
+    "uploader",
+    "ffmpeg",
+    "assets"
+  ],
+  "author": "ShotAi Team",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^1.6.8",
+    "form-data": "^4.0.0"
+  }
+}

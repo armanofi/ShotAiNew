@@ -10,6 +10,14 @@ const createInitialTool = (name, url) => ({
   accounts: [],
 });
 
+// Default home account (opens ShotAi portal when app starts)
+export const SHOTAI_HOME_ACCOUNT = {
+  toolName: 'ShotAi',
+  accountId: 'portal',
+  url: 'https://shot-ai-new.vercel.app/',
+  label: '',
+};
+
 // Default tool lists (used for fresh install only)
 const defaultWorkspaceTools = [
   createInitialTool('Flow', 'https://flow.google.com/about'),
@@ -38,10 +46,10 @@ export const useAppStore = create(
       sosmedTools: defaultSosmedTools,
       risetProdukTools: defaultRisetProdukTools,
 
-      // UI State — NOT persisted (intentionally transient)
+      // UI State — default activeAccount is ShotAi homepage so it opens immediately on start
       isAiStudioOpen: false,
       studioView: null,
-      activeAccount: null,
+      activeAccount: SHOTAI_HOME_ACCOUNT,
       activeStudioTool: null,
 
       // Actions
@@ -53,16 +61,21 @@ export const useAppStore = create(
 
       setActiveAccount: (accountInfo) => set({ activeAccount: accountInfo }),
 
+      openShotAiPortal: () => set({ activeAccount: SHOTAI_HOME_ACCOUNT }),
+
       addAccount: (category, toolName, label) => set((state) => {
         let categoryKey = 'workspaceTools';
         if (category === 'sosmed') categoryKey = 'sosmedTools';
         else if (category === 'risetProduk') categoryKey = 'risetProdukTools';
+        const newAccountId = generateId();
+        let targetUrl = '';
         const updatedTools = state[categoryKey].map(tool => {
           if (tool.name === toolName) {
+            targetUrl = tool.url;
             return {
               ...tool,
               accounts: [...tool.accounts, {
-                id: generateId(),
+                id: newAccountId,
                 label,
                 createdAt: new Date().toISOString()
               }]
@@ -70,7 +83,15 @@ export const useAppStore = create(
           }
           return tool;
         });
-        return { [categoryKey]: updatedTools };
+        return {
+          [categoryKey]: updatedTools,
+          activeAccount: {
+            toolName,
+            accountId: newAccountId,
+            url: targetUrl,
+            label,
+          }
+        };
       }),
 
       removeAccount: (category, toolName, accountId) => set((state) => {
@@ -86,17 +107,36 @@ export const useAppStore = create(
           }
           return tool;
         });
-        return { [categoryKey]: updatedTools };
+        // Saat menghapus akun, alihkan tampilan langsung kembali ke ShotAi beranda
+        return {
+          [categoryKey]: updatedTools,
+          activeAccount: SHOTAI_HOME_ACCOUNT,
+        };
       }),
     }),
     {
       name: 'shotai-workspace', // localStorage key
-      // Only persist the workspace/account data, NOT UI state
+      // Persist workspace/account data and AI Studio active tool/view
       partialize: (state) => ({
         workspaceTools: state.workspaceTools,
         sosmedTools: state.sosmedTools,
         risetProdukTools: state.risetProdukTools,
+        isAiStudioOpen: state.isAiStudioOpen,
+        activeStudioTool: state.activeStudioTool,
+        studioView: state.studioView,
       }),
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          // Remove ShotAi from workspaceTools if present from earlier session
+          if (Array.isArray(state.workspaceTools)) {
+            state.workspaceTools = state.workspaceTools.filter(t => t.name.toLowerCase() !== 'shotai');
+          }
+          // Default to ShotAi homepage on app launch if no account is selected or if previously on portal
+          if (!state.activeAccount || state.activeAccount.toolName === 'ShotAi') {
+            state.activeAccount = SHOTAI_HOME_ACCOUNT;
+          }
+        }
+      },
     }
   )
 );

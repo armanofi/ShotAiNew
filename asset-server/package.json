@@ -1,0 +1,29 @@
+{
+  "name": "shotai-asset-server",
+  "version": "1.0.0",
+  "description": "Production-ready Master Asset Server for ShotAi Effects and Transitions",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js"
+  },
+  "keywords": [
+    "shotai",
+    "asset-server",
+    "effects",
+    "transitions"
+  ],
+  "author": "ShotAi Team",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "helmet": "^7.1.0",
+    "multer": "^1.4.5-lts.1",
+    "pg": "^8.11.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0"
+  }
+}

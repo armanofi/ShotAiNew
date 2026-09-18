@@ -1,26 +1,19 @@
 import { useState, useEffect } from 'react';
 import { useAppStore } from '../store/useAppStore';
 import { 
-  Search, Settings, BookOpen, Video, Scissors, 
-  Mic, Camera, Palette, Box, Image as ImageIcon, 
-  Share2, Zap, ArrowLeft, ChevronRight, Key, Music
+  Search, Settings, BookOpen, ArrowLeft, 
+  ChevronRight, Key, Music, Disc3 
 } from 'lucide-react';
 import ApiKeyModal from './ApiKeyModal';
 import ApiWebviewOverlay from './ApiWebviewOverlay';
 import AudioToStoryboard from './AudioToStoryboard';
 import VideoKaraoke from './VideoKaraoke';
+import AutoAlbum from './AutoAlbum';
 
 const studioTools = [
   { id: 'storyboard', name: 'Storyboard Maker', desc: 'Alur scene', icon: BookOpen, color: '#60a5fa', bg: 'rgba(96,165,250,0.12)' },
+  { id: 'auto-album', name: 'Auto Album', desc: 'Bikin video musik 1 jam', icon: Disc3, color: '#ec4899', bg: 'rgba(236,72,153,0.12)' },
   { id: 'tiktok-dl', name: 'Video Karaoke', desc: 'Lagu jadi karaoke', icon: Music, color: '#f472b6', bg: 'rgba(244,114,182,0.12)' },
-  { id: 'split-video', name: 'Split Video', desc: 'Potong video', icon: Scissors, color: '#fb923c', bg: 'rgba(251,146,60,0.12)' },
-  { id: 'voiceover', name: 'Voiceover', desc: 'Naskah jadi suara', icon: Mic, color: '#4ade80', bg: 'rgba(74,222,128,0.12)' },
-  { id: 'product-photo', name: 'Foto Produk', desc: 'Prompt foto produk', icon: Camera, color: '#facc15', bg: 'rgba(250,204,21,0.12)' },
-  { id: 'branding', name: 'Branding AI', desc: 'Logo & moodboard', icon: Palette, color: '#c084fc', bg: 'rgba(192,132,252,0.12)' },
-  { id: 'mockup', name: 'Mockup Produk', desc: 'Prompt mockup', icon: Box, color: '#818cf8', bg: 'rgba(129,140,248,0.12)' },
-  { id: 'photographer', name: 'Fotografer AI', desc: 'Foto gaya pro', icon: ImageIcon, color: '#22d3ee', bg: 'rgba(34,211,238,0.12)' },
-  { id: 'affiliate', name: 'Affiliate Kit', desc: 'Caption & skrip', icon: Share2, color: '#34d399', bg: 'rgba(52,211,153,0.12)' },
-  { id: 'prompt-video', name: 'Prompt Video', desc: 'Prompt video AI', icon: Zap, color: '#fb7185', bg: 'rgba(251,113,133,0.12)' },
   { id: 'audio-to-storyboard', name: 'Audio to Storyboard', desc: 'Lagu jadi lirik', icon: Music, color: '#f59e0b', bg: 'rgba(245,158,11,0.12)' },
 ];
 
@@ -46,10 +39,10 @@ function ToolGrid({ onSelect }) {
               gap: '10px',
               padding: '16px 8px 14px',
               borderRadius: '14px',
-              border: '1.5px solid #1e293b',
+              border: '1px solid #27272a',
               cursor: 'pointer',
               textAlign: 'center',
-              backgroundColor: '#0a111f',
+              backgroundColor: '#18181b',
               transition: 'border-color 0.15s, background-color 0.15s, transform 0.15s',
               minWidth: 0,
             }}
@@ -59,8 +52,8 @@ function ToolGrid({ onSelect }) {
               e.currentTarget.style.transform = 'translateY(-2px)';
             }}
             onMouseLeave={e => {
-              e.currentTarget.style.borderColor = '#1e293b';
-              e.currentTarget.style.backgroundColor = '#0a111f';
+              e.currentTarget.style.borderColor = '#27272a';
+              e.currentTarget.style.backgroundColor = '#18181b';
               e.currentTarget.style.transform = 'translateY(0)';
             }}
           >
@@ -68,10 +61,10 @@ function ToolGrid({ onSelect }) {
               <Icon size={22} />
             </div>
             <div style={{ minWidth: 0, width: '100%' }}>
-              <div style={{ fontSize: '11px', fontWeight: 700, color: '#cbd5e1', lineHeight: 1.3, wordBreak: 'break-word' }}>
+              <div style={{ fontSize: '11px', fontWeight: 700, color: '#f4f4f5', lineHeight: 1.3, wordBreak: 'break-word' }}>
                 {tool.name}
               </div>
-              <div style={{ fontSize: '10px', color: '#475569', marginTop: '3px', lineHeight: 1.3 }}>
+              <div style={{ fontSize: '10px', color: '#71717a', marginTop: '3px', lineHeight: 1.3 }}>
                 {tool.desc}
               </div>
             </div>
@@ -88,21 +81,30 @@ function ToolDetail({ tool, onBack }) {
   // Video Karaoke: full-height dedicated UI, no placeholder wrapper
   if (tool.id === 'tiktok-dl') {
     return (
-      <div className="flex flex-col h-full" style={{ backgroundColor: '#060e1c' }}>
+      <div className="flex flex-col h-full" style={{ backgroundColor: '#09090b' }}>
         <VideoKaraoke onBack={onBack} />
       </div>
     );
   }
 
+  // Auto Album: full-height dedicated UI
+  if (tool.id === 'auto-album') {
+    return (
+      <div className="flex flex-col h-full" style={{ backgroundColor: '#09090b' }}>
+        <AutoAlbum onBack={onBack} />
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-col h-full" style={{ backgroundColor: '#0f172a' }}>
-      <div className="flex items-center gap-3 p-4 border-b" style={{ borderColor: '#334155', backgroundColor: '#1e293b' }}>
+    <div className="flex flex-col h-full" style={{ backgroundColor: '#09090b' }}>
+      <div className="flex items-center gap-3 p-4 border-b" style={{ borderColor: '#27272a', backgroundColor: '#111113' }}>
         <button 
           onClick={onBack}
           className="p-1.5 rounded-lg transition-colors text-slate-300"
-          style={{ backgroundColor: '#334155' }}
-          onMouseEnter={e => e.currentTarget.style.backgroundColor = '#475569'}
-          onMouseLeave={e => e.currentTarget.style.backgroundColor = '#334155'}
+          style={{ backgroundColor: '#18181b', border: '1px solid #27272a' }}
+          onMouseEnter={e => e.currentTarget.style.backgroundColor = '#27272a'}
+          onMouseLeave={e => e.currentTarget.style.backgroundColor = '#18181b'}
         >
           <ArrowLeft size={16} />
         </button>
@@ -126,7 +128,7 @@ function ToolDetail({ tool, onBack }) {
         )}
 
         {tool.id === 'storyboard' && (
-          <div className="w-full text-left border rounded-xl p-4" style={{ borderColor: '#334155', backgroundColor: '#1e293b' }}>
+          <div className="w-full text-left border rounded-xl p-4" style={{ borderColor: '#27272a', backgroundColor: '#18181b' }}>
             <h5 className="font-medium mb-3 text-sm text-slate-300 flex items-center gap-2">
               <ChevronRight size={14} style={{ color: '#3b82f6' }} />
               Sub-fitur: Character Sheet
@@ -252,10 +254,10 @@ export default function AiStudioPanel() {
   }
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', backgroundColor: '#060e1c', width: '100%' }}>
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', backgroundColor: '#09090b', width: '100%' }}>
       {/* Studio Header */}
       {!activeStudioTool && (
-        <div className="flex-shrink-0 border-b" style={{ borderColor: '#334155', backgroundColor: '#1e293b' }}>
+        <div className="flex-shrink-0 border-b" style={{ borderColor: '#27272a', backgroundColor: '#111113' }}>
           <div className="flex items-center justify-between px-4 pt-4 pb-3">
             <h2 className="text-base font-bold" style={{ 
               background: 'linear-gradient(to right, #60a5fa, #a78bfa)',
@@ -275,8 +277,8 @@ export default function AiStudioPanel() {
                   // User can also open the modal from here if they already have a key
                   setIsApiKeyModalOpen(true);
                 }}
-                className="p-1.5 rounded-md transition-colors hover:bg-slate-700" 
-                style={{ color: '#94a3b8', backgroundColor: '#334155' }}
+                className="p-1.5 rounded-md transition-colors" 
+                style={{ color: '#a1a1aa', backgroundColor: '#18181b', border: '1px solid #27272a' }}
               >
                 <Settings size={14} />
               </button>
@@ -284,26 +286,32 @@ export default function AiStudioPanel() {
           </div>
           
           <div className="relative px-4 pb-4">
-            <Search size={14} className="absolute left-7 top-1/2 -translate-y-1/2" style={{ color: '#64748b' }} />
+            <Search size={14} className="absolute left-7 top-1/2 -translate-y-1/2" style={{ color: '#71717a' }} />
             <input 
               type="text" 
               placeholder="Cari tool..." 
               className="w-full rounded-lg pl-8 pr-4 py-2 text-sm focus:outline-none"
               style={{ 
-                backgroundColor: '#0f172a',
-                border: '1px solid #334155',
-                color: '#f8fafc',
+                backgroundColor: '#18181b',
+                border: '1px solid #27272a',
+                color: '#f4f4f5',
               }}
             />
           </div>
         </div>
       )}
 
-      {/* Content Area */}
-      <div className="flex-1 overflow-y-auto" style={{ overflowX: 'hidden' }}>
-        {activeToolObj ? (
-          <ToolDetail tool={activeToolObj} onBack={closeStudioTool} />
-        ) : (
+      {/* Content Area — Keep-Alive tabs for all tools in AI Studio */}
+      <div className="flex-1" style={{ height: '100%', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+        {/* Tool Grid (Home AI Studio) */}
+        <div 
+          className="flex-1 overflow-y-auto" 
+          style={{ 
+            display: !activeStudioTool ? 'block' : 'none', 
+            height: '100%',
+            overflowX: 'hidden' 
+          }}
+        >
           <ToolGrid onSelect={(t) => {
             if (t.id === 'storyboard') {
               setStudioView('storyboard');
@@ -311,7 +319,65 @@ export default function AiStudioPanel() {
               openStudioTool(t.id);
             }
           }} />
-        )}
+        </div>
+
+        {/* Video Karaoke App */}
+        <div 
+          className="flex-1" 
+          style={{ 
+            display: activeStudioTool === 'tiktok-dl' ? 'flex' : 'none', 
+            flexDirection: 'column', 
+            height: '100%', 
+            overflow: 'hidden' 
+          }}
+        >
+          <VideoKaraoke onBack={closeStudioTool} />
+        </div>
+
+        {/* Auto Album App */}
+        <div 
+          className="flex-1" 
+          style={{ 
+            display: activeStudioTool === 'auto-album' ? 'flex' : 'none', 
+            flexDirection: 'column', 
+            height: '100%', 
+            overflow: 'hidden' 
+          }}
+        >
+          <AutoAlbum onBack={closeStudioTool} />
+        </div>
+
+        {/* Audio to Storyboard App */}
+        <div 
+          className="flex-1" 
+          style={{ 
+            display: activeStudioTool === 'audio-to-storyboard' ? 'flex' : 'none', 
+            flexDirection: 'column', 
+            height: '100%', 
+            overflow: 'hidden' 
+          }}
+        >
+          <div className="flex flex-col h-full" style={{ backgroundColor: '#09090b' }}>
+            <div className="flex items-center gap-3 p-4 border-b" style={{ borderColor: '#27272a', backgroundColor: '#111113' }}>
+              <button 
+                onClick={closeStudioTool}
+                className="p-1.5 rounded-lg transition-colors text-slate-300 cursor-pointer"
+                style={{ backgroundColor: '#18181b', border: '1px solid #27272a' }}
+                onMouseEnter={e => e.currentTarget.style.backgroundColor = '#27272a'}
+                onMouseLeave={e => e.currentTarget.style.backgroundColor = '#18181b'}
+              >
+                <ArrowLeft size={16} />
+              </button>
+              <div className="p-1.5 rounded-md" style={{ backgroundColor: 'rgba(245,158,11,0.12)', color: '#f59e0b' }}>
+                <Music size={16} />
+              </div>
+              <h3 className="font-semibold text-white flex-1 text-sm">Audio to Storyboard</h3>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4">
+              <AudioToStoryboard />
+            </div>
+          </div>
+        </div>
       </div>
 
       <ApiKeyModal 

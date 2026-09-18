@@ -26,3 +26,18 @@ dist-ssr
 .env
 dist_electron
 database.sqlite
+
+# Media & Scratch
+*.mp4
+*.m4a
+*.ass
+scratch/
+scratch_*
+temp*
+old_*
+test*
+rebuild_karaoke.py
+renderer_debug.txt
+export_debug.json
+cache/
+

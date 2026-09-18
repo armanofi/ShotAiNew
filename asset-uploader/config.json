@@ -1,0 +1,7 @@
+{
+  "serverUrl": "http://127.0.0.1:3100",
+  "apiKey": "SHOTAI_MASTER_KEY_2026_PRODUCTION",
+  "assetRoot": "D:\\apps\\ShotAiNew\\assets",
+  "ffmpegPath": "ffmpeg",
+  "concurrency": 2
+}

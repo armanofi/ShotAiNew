@@ -1,0 +1,7 @@
+{
+  "serverUrl": "https://DOMAIN-API-SHOTAI",
+  "apiKey": "YOUR_API_KEY",
+  "assetRoot": "D:\\apps\\ShotAiNew\\assets",
+  "ffmpegPath": "ffmpeg",
+  "concurrency": 2
+}

@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 
 const defaultCharacter = (name = '') => ({
   name,
@@ -35,7 +36,9 @@ const defaultBandPersonil = {
   pianis: { ...defaultCharacter('Pianis'), active: false, gearActive: false },
 };
 
-export const useStoryboardStore = create((set, get) => ({
+export const useStoryboardStore = create(
+  persist(
+    (set, get) => ({
   // Global settings
   location: '',
   videoModel: 'video-klip', // 'video-klip' | 'video-band' | 'video-drama'
@@ -243,7 +246,24 @@ DILARANG ADA TEKS LAIN SELAIN JSON!`;
     // Regenerating specific scene logic can be similar, for now we leave it simple or disable it in complex mode
     alert("Fitur Regenerate per Scene sedang disesuaikan dengan API Gemini.");
   },
-}));
+  }),
+  {
+    name: 'shotai-storyboard-store',
+    partialize: (state) => ({
+      location: state.location,
+      videoModel: state.videoModel,
+      sceneCount: state.sceneCount,
+      shotCount: state.shotCount,
+      sceneDuration: state.sceneDuration,
+      lyrics: state.lyrics,
+      artistUtama: state.artistUtama,
+      artistFeaturing: state.artistFeaturing,
+      bandPersonil: state.bandPersonil,
+      scenes: state.scenes,
+      characterBible: state.characterBible,
+    }),
+  }
+));
 
 function getActiveCharsFullList(state) {
   const list = [];

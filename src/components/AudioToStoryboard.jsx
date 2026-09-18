@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Upload, FileAudio, Loader2, Play, CheckCircle, Image as ImageIcon, Copy, ArrowRight } from 'lucide-react';
 
 export default function AudioToStoryboard() {
@@ -19,6 +19,41 @@ export default function AudioToStoryboard() {
 
   // Step 3 Data
   const [prompts, setPrompts] = useState({ character: '', location: '', scenes: '' });
+
+  // Persistence across app navigation & session
+  const isHydratedRef = useRef(false);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('shotai_audio_to_storyboard_state');
+      if (saved) {
+        const data = JSON.parse(saved);
+        if (data) {
+          if (data.step) setStep(data.step);
+          if (data.characters) setCharacters(data.characters);
+          if (data.locations) setLocations(data.locations);
+          if (data.storySummary) setStorySummary(data.storySummary);
+          if (data.charImages) setCharImages(data.charImages);
+          if (data.prompts) setPrompts(data.prompts);
+        }
+      }
+    } catch (e) {}
+    isHydratedRef.current = true;
+  }, []);
+
+  useEffect(() => {
+    if (!isHydratedRef.current) return;
+    try {
+      localStorage.setItem('shotai_audio_to_storyboard_state', JSON.stringify({
+        step,
+        characters,
+        locations,
+        storySummary,
+        charImages,
+        prompts
+      }));
+    } catch (e) {}
+  }, [step, characters, locations, storySummary, charImages, prompts]);
 
   const getApiKey = () => {
     let apiKey = localStorage.getItem('google_ai_studio_key') || '';
