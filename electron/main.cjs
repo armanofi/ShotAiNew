@@ -111,27 +111,20 @@ function createWindow() {
   });
 
   // ──────────────────────────────────────────────────────────────
-  // IPC: Open AI Studio in a real popup window (fixes black screen)
+  // IPC: Open AI Studio in SYSTEM BROWSER (Chrome/Edge) to bypass
+  // Google's OAuth block on embedded Electron Chromium.
+  // Returns true so renderer can show copy-paste instructions.
   // ──────────────────────────────────────────────────────────────
-  ipcMain.handle('open-ai-studio-window', (event, url) => {
-    const studioWin = new BrowserWindow({
-      width: 1100,
-      height: 750,
-      title: 'Google AI Studio',
-      autoHideMenuBar: true,
-      webPreferences: {
-        nodeIntegration: false,
-        contextIsolation: true,
-        // Use a named partition so Google login session is remembered
-        partition: 'persist:aistudio',
-      }
-    });
-
-    studioWin.loadURL(url || 'https://aistudio.google.com/app/apikey');
-    studioWin.setMenuBarVisibility(false);
-
+  ipcMain.handle('open-ai-studio-window', async (event, url) => {
+    const targetUrl = url || 'https://aistudio.google.com/app/apikey';
+    try {
+      await shell.openExternal(targetUrl);
+    } catch (err) {
+      console.error('Failed to open external browser:', err);
+    }
     return true;
   });
+
 
   // ──────────────────────────────────────────────────────────────
   // IPC: Check for updates manually (from renderer)
