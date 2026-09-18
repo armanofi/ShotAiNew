@@ -49,6 +49,20 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
+// === EXPIRY HELPER ===
+function calculateExpiry(duration) {
+  const now = new Date();
+  switch (duration) {
+    case '7 Hari': return new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+    case '1 Bulan': return new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+    case '3 Bulan': return new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
+    case '6 Bulan': return new Date(now.getTime() + 180 * 24 * 60 * 60 * 1000);
+    case '1 Tahun': return new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000);
+    case 'Selamanya':
+    default: return null;
+  }
+}
+
 // === AUTH MIDDLEWARE ===
 const requireAuth = (req, res, next) => {
   const token = req.cookies.admin_token;
@@ -58,6 +72,22 @@ const requireAuth = (req, res, next) => {
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     req.user = decoded;
+    next();
+  } catch (err) {
+    res.clearCookie('admin_token');
+    return res.redirect('/login');
+  }
+};
+
+const requireSuperadmin = (req, res, next) => {
+  const token = req.cookies.admin_token;
+  if (!token) return res.redirect('/login');
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = decoded;
+    if (decoded.role !== 'superadmin') {
+      return res.redirect('/dashboard');
+    }
     next();
   } catch (err) {
     res.clearCookie('admin_token');
@@ -232,7 +262,7 @@ app.get('/login', (req, res) => {
   if (req.cookies.admin_token) {
     try {
       const decoded = jwt.verify(req.cookies.admin_token, JWT_SECRET);
-      return res.redirect(decoded.role === 'superadmin' ? '/admin' : '/');
+      return res.redirect(decoded.role === 'superadmin' ? '/admin' : '/dashboard');
     } catch(e) {
       res.clearCookie('admin_token');
     }
@@ -244,82 +274,41 @@ app.get('/login', (req, res) => {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Masuk Superadmin - ShotAi</title>
+  <title>Login - ShotAi</title>
   <script src="https://cdn.tailwindcss.com"><\/script>
   <script src="https://accounts.google.com/gsi/client" async defer><\/script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     body { font-family: 'Inter', sans-serif; background-color: #09090b; color: #f1f5f9; }
     .glass { background: #111113; border: 1px solid #27272a; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.8); }
-    .g-btn { display:flex; align-items:center; justify-content:center; gap:10px; width:100%; padding:12px 16px; border-radius:10px; border:1px solid #27272a; background:#18181b; color:white; font-weight:600; font-size:14px; cursor:pointer; transition:all .2s; }
-    .g-btn:hover { background:#27272a; border-color:#3f3f46; }
-    .inp { width:100%; padding:11px 14px; border-radius:10px; border:1px solid #27272a; background:#09090b; color:white; font-size:14px; outline:none; transition:border .2s; }
-    .inp:focus { border-color:#6366f1; box-shadow:0 0 0 3px rgba(99,102,241,.25); }
-    .inp::placeholder { color:#71717a; }
-    .lbl { display:block; font-size:12px; font-weight:600; color:#a1a1aa; margin-bottom:6px; text-transform:uppercase; letter-spacing:.05em; }
-    .submit-btn { width:100%; padding:13px; border-radius:10px; border:none; background:linear-gradient(135deg,#4F7FFF,#7C3AED); color:white; font-weight:700; font-size:14px; cursor:pointer; transition:opacity .2s; box-shadow:0 4px 16px rgba(124,58,237,0.35); }
-    .submit-btn:hover { opacity:.9; }
-    .divider { display:flex; align-items:center; gap:12px; margin:18px 0; }
-    .divider::before,.divider::after { content:''; flex:1; height:1px; background:#27272a; }
-    .divider span { color:#71717a; font-size:12px; font-weight:500; }
   </style>
 </head>
 <body class="min-h-screen flex items-center justify-center p-4 bg-[#09090b]">
-  <div class="glass w-full max-w-md rounded-2xl p-8">
+  <div class="glass w-full max-w-sm rounded-2xl p-8 border border-[#27272a] shadow-2xl bg-[#111113]">
     <div class="text-center mb-6">
       <div class="w-14 h-14 rounded-2xl mx-auto flex items-center justify-center mb-4" style="background:linear-gradient(135deg,#4F7FFF,#7C3AED);box-shadow:0 0 30px rgba(124,58,237,.5)">
         <span style="font-size:22px;font-weight:900;color:white;letter-spacing:-1px">SA</span>
       </div>
-      <h1 class="text-2xl font-bold text-white tracking-tight">Login Superadmin</h1>
-      <p class="text-gray-400 text-xs mt-1">Masuk untuk mengelola lisensi ShotAi</p>
+      <h1 class="text-2xl font-bold text-white tracking-tight">Login</h1>
+      <p class="text-gray-400 text-xs mt-1.5">Masuk dengan akun Google untuk melanjutkan</p>
     </div>
 
-    <!-- Official Google GSI Button Container -->
-    <div id="googleBtnContainer" class="w-full flex justify-center mb-3"></div>
+    <!-- Official Google GSI Button Container (Single Google Menu) -->
+    <div id="googleBtnContainer" class="w-full flex justify-center mb-4 min-h-[44px]"></div>
 
-    <!-- Fallback Custom Google Button -->
-    <button class="g-btn" id="googleBtn" onclick="doGoogleLogin()">
-      <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
-      <span>Masuk dengan Akun Google</span>
-    </button>
+    <div id="errorMsg" class="text-red-400 text-xs text-center hidden p-2.5 rounded-lg bg-red-950/40 border border-red-800/60 font-medium mb-3"></div>
 
-    <div class="divider"><span>atau masuk dengan email & password</span></div>
-
-    <form id="loginForm" class="space-y-4">
-      <div>
-        <label class="lbl">Email Superadmin</label>
-        <input type="email" id="email" class="inp" placeholder="salmanbs2018@gmail.com" required>
-      </div>
-      <div>
-        <label class="lbl">Password</label>
-        <input type="password" id="password" class="inp" placeholder="••••••••" required>
-      </div>
-      <button type="submit" id="submitBtn" class="submit-btn">Masuk ke Dashboard</button>
-      <div id="errorMsg" class="text-red-400 text-xs text-center hidden p-2.5 rounded-lg bg-red-950/40 border border-red-800/60 font-medium"></div>
-    </form>
-
-    <div class="mt-4 pt-3 border-t border-[#27272a] text-center">
-      <button type="button" onclick="fillSuperadmin()" class="text-xs text-indigo-400 hover:text-indigo-300 transition underline cursor-pointer">
-        ⚡ Masuk Cepat: salmanbs2018@gmail.com
-      </button>
-    </div>
-
-    <div class="mt-4 text-center">
+    <div class="mt-6 pt-4 border-t border-[#27272a] text-center">
       <a href="/" class="text-xs text-gray-500 hover:text-gray-300 transition">← Kembali ke Beranda ShotAi</a>
     </div>
   </div>
 
   <script>
     const CLIENT_ID = '${GOOGLE_CLIENT_ID_HTML}';
-    let tokenClient = null;
 
     async function sendAuthPayload(payload) {
       const errorDiv = document.getElementById('errorMsg');
-      const btn = document.getElementById('googleBtn');
-      if (btn) {
-        btn.disabled = true;
-        btn.textContent = 'Memverifikasi akun Google...';
-      }
+      if (errorDiv) errorDiv.classList.add('hidden');
       try {
         const res = await fetch('/api/google-login', {
           method: 'POST',
@@ -328,32 +317,27 @@ app.get('/login', (req, res) => {
         });
         const data = await res.json();
         if (data.success) {
-          window.location.href = data.redirect || '/admin';
+          window.location.href = data.redirect || '/dashboard';
         } else {
-          errorDiv.textContent = data.message || 'Login Google gagal';
-          errorDiv.classList.remove('hidden');
-          if (btn) {
-            btn.disabled = false;
-            btn.textContent = 'Masuk dengan Akun Google';
+          if (errorDiv) {
+            errorDiv.textContent = data.message || 'Login gagal';
+            errorDiv.classList.remove('hidden');
           }
         }
       } catch (err) {
-        errorDiv.textContent = 'Kesalahan koneksi ke server';
-        errorDiv.classList.remove('hidden');
-        if (btn) {
-          btn.disabled = false;
-          btn.textContent = 'Masuk dengan Akun Google';
+        if (errorDiv) {
+          errorDiv.textContent = 'Terjadi kesalahan koneksi ke server';
+          errorDiv.classList.remove('hidden');
         }
       }
     }
 
     function initGoogle() {
       if (typeof google === 'undefined' || !google.accounts) {
-        setTimeout(initGoogle, 200);
+        setTimeout(initGoogle, 150);
         return;
       }
       try {
-        // 1. Google Identity Services ID Token initialization
         google.accounts.id.initialize({
           client_id: CLIENT_ID,
           callback: (response) => {
@@ -370,115 +354,18 @@ app.get('/login', (req, res) => {
           google.accounts.id.renderButton(container, {
             theme: 'filled_blue',
             size: 'large',
-            width: 360,
+            width: 320,
             text: 'signin_with',
             shape: 'rectangular',
             logo_alignment: 'left'
           });
         }
-
-        // 2. OAuth2 Token Client (Popup flow for custom button)
-        if (google.accounts.oauth2) {
-          tokenClient = google.accounts.oauth2.initTokenClient({
-            client_id: CLIENT_ID,
-            scope: 'email profile openid',
-            callback: (tokenResponse) => {
-              if (tokenResponse && tokenResponse.access_token) {
-                sendAuthPayload({ accessToken: tokenResponse.access_token });
-              } else if (tokenResponse && tokenResponse.error) {
-                const errorDiv = document.getElementById('errorMsg');
-                errorDiv.textContent = 'Google Auth Error: ' + (tokenResponse.error_description || tokenResponse.error);
-                errorDiv.classList.remove('hidden');
-                document.getElementById('googleBtn').disabled = false;
-                document.getElementById('googleBtn').textContent = 'Masuk dengan Akun Google';
-              }
-            }
-          });
-        }
       } catch (e) {
-        console.warn('Google init warning:', e);
+        console.warn('Google init error:', e);
       }
-    }
-
-    function doGoogleLogin() {
-      const btn = document.getElementById('googleBtn');
-      const errorDiv = document.getElementById('errorMsg');
-      errorDiv.classList.add('hidden');
-
-      if (tokenClient) {
-        btn.disabled = true;
-        btn.textContent = 'Membuka Google...';
-        tokenClient.requestAccessToken({ prompt: 'select_account' });
-      } else if (typeof google !== 'undefined' && google.accounts && google.accounts.id) {
-        btn.disabled = true;
-        btn.textContent = 'Menghubungkan ke Google...';
-        google.accounts.id.prompt((notification) => {
-          if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-            btn.disabled = false;
-            btn.textContent = 'Masuk dengan Akun Google';
-            // Trigger direct OAuth fallback
-            const redirectUri = window.location.origin + '/api/google-callback';
-            const authUrl = 'https://accounts.google.com/o/oauth2/v2/auth?' + new URLSearchParams({
-              client_id: CLIENT_ID,
-              redirect_uri: redirectUri,
-              response_type: 'token',
-              scope: 'email profile openid',
-              prompt: 'select_account'
-            }).toString();
-            window.location.href = authUrl;
-          }
-        });
-      } else {
-        // Direct OAuth fallback
-        const redirectUri = window.location.origin + '/api/google-callback';
-        const authUrl = 'https://accounts.google.com/o/oauth2/v2/auth?' + new URLSearchParams({
-          client_id: CLIENT_ID,
-          redirect_uri: redirectUri,
-          response_type: 'token',
-          scope: 'email profile openid',
-          prompt: 'select_account'
-        }).toString();
-        window.location.href = authUrl;
-      }
-    }
-
-    function fillSuperadmin() {
-      document.getElementById('email').value = 'salmanbs2018@gmail.com';
-      document.getElementById('password').value = 'Armanofi88';
-      document.getElementById('submitBtn').click();
     }
 
     window.addEventListener('load', initGoogle);
-
-    document.getElementById('loginForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const email = document.getElementById('email').value;
-      const password = document.getElementById('password').value;
-      const errorDiv = document.getElementById('errorMsg');
-      const btn = document.getElementById('submitBtn');
-      btn.textContent = 'Memproses...'; btn.disabled = true;
-      try {
-        const res = await fetch('/api/login', {
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ email, password })
-        });
-        const data = await res.json();
-        if (data.success) {
-          window.location.href = data.redirect || '/admin';
-        } else {
-          errorDiv.textContent = data.message;
-          errorDiv.classList.remove('hidden');
-          btn.textContent = 'Masuk ke Dashboard';
-          btn.disabled = false;
-        }
-      } catch (err) {
-        errorDiv.textContent = 'Terjadi kesalahan jaringan';
-        errorDiv.classList.remove('hidden');
-        btn.textContent = 'Masuk ke Dashboard';
-        btn.disabled = false;
-      }
-    });
   <\/script>
 </body>
 </html>`;
@@ -620,14 +507,17 @@ app.post('/api/google-login', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Email tidak ditemukan dari akun Google.' });
     }
 
-    // Always grant 'superadmin' role on Google Login to the superadmin dashboard
+    const cleanEmail = email.trim().toLowerCase();
+    const isSuperadmin = cleanEmail === 'salmanbs2018@gmail.com';
+    const role = isSuperadmin ? 'superadmin' : 'user';
+
     const user = await User.findOneAndUpdate(
-      { email: email.toLowerCase() },
+      { email: cleanEmail },
       {
         $set: {
-          name: name || email.split('@')[0],
-          avatarUrl: picture || gravatarUrl(email),
-          role: 'superadmin',
+          name: name || cleanEmail.split('@')[0],
+          avatarUrl: picture || gravatarUrl(cleanEmail),
+          role: role,
         },
         $setOnInsert: {
           password: `google_${googleId || Date.now()}`,
@@ -636,9 +526,9 @@ app.post('/api/google-login', async (req, res) => {
       { upsert: true, new: true }
     );
 
-    // Generate JWT token with superadmin role
+    // Generate JWT token with appropriate role
     const token = jwt.sign(
-      { id: user._id, email: user.email, role: 'superadmin' },
+      { id: user._id, email: user.email, role: user.role, name: user.name, avatarUrl: user.avatarUrl },
       JWT_SECRET,
       { expiresIn: '7d' }
     );
@@ -649,10 +539,12 @@ app.post('/api/google-login', async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
     });
 
+    const redirect = isSuperadmin ? '/admin' : '/dashboard';
+
     res.json({
       success: true,
-      redirect: '/admin',
-      profile: { name: user.name, email: user.email, avatarUrl: user.avatarUrl }
+      redirect,
+      profile: { name: user.name, email: user.email, avatarUrl: user.avatarUrl, role: user.role }
     });
   } catch (err) {
     console.error('Google login error:', err.message);
@@ -712,25 +604,77 @@ app.get('/logout', (req, res) => {
 
 // === PROTECTED ADMIN ROUTES ===
 
-// 5. Admin Dashboard (Protected)
-app.get('/admin', requireAuth, async (req, res) => {
+// === PROTECTED ADMIN & CUSTOMER ROUTES ===
+
+// 5. Admin Dashboard (Protected - Superadmin Only)
+app.get('/admin', requireSuperadmin, async (req, res) => {
   try {
     await connectDB();
     const rows = await License.find().sort({ createdAt: -1 });
-    
+
+    const formatDate = (d) => {
+      if (!d) return '-';
+      return new Date(d).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+    };
+
     let rowsHtml = '';
     rows.forEach(row => {
+      const isExpired = row.expires_at && new Date() > new Date(row.expires_at);
+      const displayStatus = isExpired ? 'expired' : row.status;
+
+      let masaAktifHtml = '';
+      if (!row.expires_at || row.duration === 'Selamanya') {
+        masaAktifHtml = `<span class="bg-emerald-950/80 text-emerald-300 border border-emerald-800/70 py-0.5 px-2.5 rounded-full text-xs font-semibold">Selamanya</span>`;
+      } else if (isExpired) {
+        masaAktifHtml = `<span class="bg-red-950/80 text-red-400 border border-red-800/70 py-0.5 px-2.5 rounded-full text-xs font-semibold">Kadaluarsa (${formatDate(row.expires_at)})</span>`;
+      } else {
+        masaAktifHtml = `<span class="text-xs text-indigo-300 font-medium">${row.duration || 'Aktif'} <span class="text-gray-400 text-[11px]">(s/d ${formatDate(row.expires_at)})</span></span>`;
+      }
+
+      let statusBadge = '';
+      if (displayStatus === 'active') {
+        statusBadge = `<span class="bg-emerald-950/80 text-emerald-300 border border-emerald-800/80 py-1 px-3 rounded-full text-xs font-semibold">Aktif</span>`;
+      } else if (displayStatus === 'expired') {
+        statusBadge = `<span class="bg-red-950/80 text-red-300 border border-red-800/80 py-1 px-3 rounded-full text-xs font-semibold">Kadaluarsa</span>`;
+      } else {
+        statusBadge = `<span class="bg-zinc-800 text-zinc-400 border border-zinc-700 py-1 px-3 rounded-full text-xs font-semibold">Nonaktif</span>`;
+      }
+
+      const rowJson = JSON.stringify({
+        id: row._id.toString(),
+        code: row.code,
+        type: row.type,
+        owner_email: row.owner_email || '',
+        status: row.status,
+        duration: row.duration || 'Selamanya',
+        expires_at: row.expires_at ? row.expires_at.toISOString().split('T')[0] : ''
+      }).replace(/"/g, '&quot;');
+
       rowsHtml += `
         <tr class="border-b border-[#27272a] hover:bg-white/[0.03] transition-colors">
           <td class="py-3.5 px-6 text-left whitespace-nowrap">
-            <span class="font-medium font-mono text-indigo-300 bg-indigo-950/60 px-2.5 py-1 rounded-md border border-indigo-800/60 text-xs shadow-sm">${row.code}</span>
+            <div class="flex items-center gap-2">
+              <span class="font-mono text-indigo-300 bg-indigo-950/60 px-2.5 py-1 rounded-md border border-indigo-800/60 text-xs shadow-sm font-semibold">${row.code}</span>
+              <button onclick="copyToClipboard('${row.code}')" title="Salin Kode" class="text-gray-400 hover:text-white p-1 rounded hover:bg-white/10 transition">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+              </button>
+            </div>
           </td>
           <td class="py-3.5 px-6 text-left">
-            <span class="${row.type === 'premium' ? 'bg-purple-950/80 text-purple-300 border border-purple-800/80 shadow-purple-950/50' : 'bg-emerald-950/80 text-emerald-300 border border-emerald-800/80 shadow-emerald-950/50'} font-bold py-1 px-3 rounded-full text-xs shadow-sm">${row.type.toUpperCase()}</span>
+            <span class="${row.type === 'premium' ? 'bg-purple-950/80 text-purple-300 border border-purple-800/80' : 'bg-blue-950/80 text-blue-300 border border-blue-800/80'} font-bold py-1 px-3 rounded-full text-xs shadow-sm">${row.type.toUpperCase()}</span>
           </td>
           <td class="py-3.5 px-6 text-left text-xs font-mono text-gray-300">${row.owner_email || '<span class="text-gray-600">-</span>'}</td>
-          <td class="py-3.5 px-6 text-center">
-            <span class="bg-blue-950/80 text-blue-300 border border-blue-800/80 py-1 px-3 rounded-full text-xs shadow-sm shadow-blue-950/50 font-medium">${row.status}</span>
+          <td class="py-3.5 px-6 text-left">${masaAktifHtml}</td>
+          <td class="py-3.5 px-6 text-center">${statusBadge}</td>
+          <td class="py-3.5 px-6 text-center whitespace-nowrap">
+            <div class="flex items-center justify-center gap-2">
+              <button onclick="openEditModal(${rowJson})" class="bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 border border-indigo-500/30 px-2.5 py-1 rounded-md text-xs font-semibold transition flex items-center gap-1 cursor-pointer">
+                <span>✏️</span> Edit
+              </button>
+              <button onclick="deleteLicense('${row._id}')" class="bg-red-600/20 hover:bg-red-600/40 text-red-300 border border-red-500/30 px-2.5 py-1 rounded-md text-xs font-semibold transition flex items-center gap-1 cursor-pointer">
+                <span>🗑️</span> Hapus
+              </button>
+            </div>
           </td>
         </tr>
       `;
@@ -755,7 +699,7 @@ app.get('/admin', requireAuth, async (req, res) => {
       </head>
       <body class="bg-[#09090b] text-[#f1f5f9]">
           <div class="min-h-screen p-6 md:p-10 bg-[#09090b]">
-              <div class="max-w-5xl mx-auto bg-[#111113] rounded-2xl border border-[#27272a] shadow-2xl overflow-hidden">
+              <div class="max-w-6xl mx-auto bg-[#111113] rounded-2xl border border-[#27272a] shadow-2xl overflow-hidden">
                   <!-- Header -->
                   <div class="bg-[#18181b] border-b border-[#27272a] p-6 flex flex-wrap justify-between items-center gap-4">
                       <div class="flex items-center gap-3">
@@ -763,16 +707,16 @@ app.get('/admin', requireAuth, async (req, res) => {
                           <span class="text-white font-black text-base tracking-tight">SA</span>
                         </div>
                         <div>
-                          <h1 class="text-xl font-bold text-white tracking-tight">ShotAi Superadmin Dashboard</h1>
+                          <div class="flex items-center gap-2">
+                            <h1 class="text-xl font-bold text-white tracking-tight">ShotAi Superadmin Dashboard</h1>
+                            <span class="bg-indigo-900/60 text-indigo-300 border border-indigo-700/60 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">Superadmin</span>
+                          </div>
                           <p class="text-gray-400 text-xs mt-0.5">Logged in as: <span class="text-indigo-300 font-mono">${req.user.email}</span></p>
                         </div>
                       </div>
                       <div class="flex items-center gap-3">
-                        <span class="text-emerald-400 text-xs bg-emerald-950/60 px-3 py-1.5 rounded-full border border-emerald-800/80 font-medium flex items-center gap-1.5 shadow-sm shadow-emerald-950">
-                          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                          API Online
-                        </span>
-                        <a href="/logout" class="bg-white/10 hover:bg-white/20 text-white text-xs font-semibold py-2 px-4 rounded-lg transition border border-white/10">Logout</a>
+                        <a href="/dashboard" class="bg-[#27272a] hover:bg-[#3f3f46] text-gray-300 text-xs font-semibold py-2 px-3.5 rounded-lg transition border border-[#3f3f46]">Lihat Tampilan Pelanggan</a>
+                        <a href="/logout" class="bg-red-950/50 hover:bg-red-900/60 text-red-300 text-xs font-semibold py-2 px-3.5 rounded-lg transition border border-red-800/60">Logout</a>
                       </div>
                   </div>
                   
@@ -783,20 +727,31 @@ app.get('/admin', requireAuth, async (req, res) => {
                             <span>🔑</span>
                             <span>Buat Lisensi Baru</span>
                           </h3>
-                          <form id="generateForm" class="flex flex-wrap md:flex-nowrap items-end gap-4">
-                              <div class="w-full md:flex-1">
+                          <form id="generateForm" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-end">
+                              <div>
                                   <label class="block text-xs font-semibold text-gray-400 mb-1.5">Tipe Lisensi</label>
                                   <select id="licType" class="w-full p-2.5 bg-[#09090b] text-white border border-[#27272a] rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm" onchange="toggleEmailField()">
-                                      <option value="free">Free</option>
                                       <option value="premium">Premium</option>
+                                      <option value="free">Free</option>
                                   </select>
                               </div>
-                              <div class="w-full md:flex-1" id="emailContainer" style="display: none;">
-                                  <label class="block text-xs font-semibold text-gray-400 mb-1.5">Email Pemilik (Wajib untuk Premium)</label>
-                                  <input type="email" id="licEmail" placeholder="email@contoh.com" class="w-full p-2.5 bg-[#09090b] text-white border border-[#27272a] rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm placeholder-gray-600">
+                              <div>
+                                  <label class="block text-xs font-semibold text-gray-400 mb-1.5">Masa Aktif</label>
+                                  <select id="licDuration" class="w-full p-2.5 bg-[#09090b] text-white border border-[#27272a] rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+                                      <option value="1 Bulan" selected>1 Bulan (30 Hari)</option>
+                                      <option value="7 Hari">7 Hari (Trial)</option>
+                                      <option value="3 Bulan">3 Bulan</option>
+                                      <option value="6 Bulan">6 Bulan</option>
+                                      <option value="1 Tahun">1 Tahun</option>
+                                      <option value="Selamanya">Selamanya / Lifetime</option>
+                                  </select>
                               </div>
-                              <div class="w-full md:w-auto">
-                                  <button type="submit" class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold py-2.5 px-6 rounded-lg transition shadow-lg shadow-indigo-600/30 text-sm cursor-pointer active:scale-95">Generate Lisensi</button>
+                              <div id="emailContainer">
+                                  <label class="block text-xs font-semibold text-gray-400 mb-1.5">Email Pemilik (Wajib untuk Premium)</label>
+                                  <input type="email" id="licEmail" placeholder="pelanggan@gmail.com" class="w-full p-2.5 bg-[#09090b] text-white border border-[#27272a] rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm placeholder-gray-600">
+                              </div>
+                              <div>
+                                  <button type="submit" id="genBtn" class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold py-2.5 px-4 rounded-lg transition shadow-lg shadow-indigo-600/30 text-sm cursor-pointer active:scale-95">Generate Lisensi</button>
                               </div>
                           </form>
                       </div>
@@ -816,11 +771,13 @@ app.get('/admin', requireAuth, async (req, res) => {
                                       <th class="py-3.5 px-6 text-left">Kode Lisensi</th>
                                       <th class="py-3.5 px-6 text-left">Tipe</th>
                                       <th class="py-3.5 px-6 text-left">Email Pemilik</th>
+                                      <th class="py-3.5 px-6 text-left">Masa Aktif</th>
                                       <th class="py-3.5 px-6 text-center">Status</th>
+                                      <th class="py-3.5 px-6 text-center">Aksi</th>
                                   </tr>
                               </thead>
                               <tbody class="text-sm">
-                                  ${rowsHtml || '<tr><td colspan="4" class="text-center py-8 text-gray-500">Belum ada lisensi terdaftar</td></tr>'}
+                                  ${rowsHtml || '<tr><td colspan="6" class="text-center py-8 text-gray-500">Belum ada lisensi terdaftar</td></tr>'}
                               </tbody>
                           </table>
                       </div>
@@ -828,53 +785,189 @@ app.get('/admin', requireAuth, async (req, res) => {
               </div>
           </div>
 
+          <!-- Edit License Modal -->
+          <div id="editModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+            <div class="bg-[#18181b] border border-[#27272a] rounded-2xl w-full max-w-md p-6 shadow-2xl">
+              <div class="flex items-center justify-between pb-4 border-b border-[#27272a] mb-5">
+                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                  <span>✏️</span> Edit Lisensi
+                </h3>
+                <button onclick="closeEditModal()" class="text-gray-400 hover:text-white text-lg font-bold">&times;</button>
+              </div>
+              <form id="editForm" class="space-y-4">
+                <input type="hidden" id="editId">
+                <div>
+                  <label class="block text-xs font-semibold text-gray-400 mb-1">Kode Lisensi</label>
+                  <input type="text" id="editCode" disabled class="w-full p-2.5 bg-[#09090b] text-gray-400 border border-[#27272a] rounded-lg text-sm font-mono cursor-not-allowed">
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-gray-400 mb-1">Tipe Lisensi</label>
+                  <select id="editType" class="w-full p-2.5 bg-[#09090b] text-white border border-[#27272a] rounded-lg text-sm">
+                    <option value="premium">Premium</option>
+                    <option value="free">Free</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-gray-400 mb-1">Email Pemilik</label>
+                  <input type="email" id="editEmail" class="w-full p-2.5 bg-[#09090b] text-white border border-[#27272a] rounded-lg text-sm placeholder-gray-600">
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-gray-400 mb-1">Perbarui Masa Aktif</label>
+                  <select id="editDuration" class="w-full p-2.5 bg-[#09090b] text-white border border-[#27272a] rounded-lg text-sm">
+                    <option value="keep" selected>Biarkan Tetap (Tidak Mengubah Waktu Kadaluarsa)</option>
+                    <option value="7 Hari">Ubah ke 7 Hari dari sekarang</option>
+                    <option value="1 Bulan">Ubah ke 1 Bulan dari sekarang</option>
+                    <option value="3 Bulan">Ubah ke 3 Bulan dari sekarang</option>
+                    <option value="6 Bulan">Ubah ke 6 Bulan dari sekarang</option>
+                    <option value="1 Tahun">Ubah ke 1 Tahun dari sekarang</option>
+                    <option value="Selamanya">Ubah ke Selamanya / Lifetime</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-gray-400 mb-1">Status Lisensi</label>
+                  <select id="editStatus" class="w-full p-2.5 bg-[#09090b] text-white border border-[#27272a] rounded-lg text-sm">
+                    <option value="active">Aktif</option>
+                    <option value="disabled">Nonaktif</option>
+                    <option value="expired">Kadaluarsa</option>
+                  </select>
+                </div>
+                <div class="flex items-center justify-end gap-3 pt-4 border-t border-[#27272a] mt-6">
+                  <button type="button" onclick="closeEditModal()" class="px-4 py-2 bg-transparent text-gray-400 hover:text-white text-xs font-semibold rounded-lg transition">Batal</button>
+                  <button type="submit" id="saveEditBtn" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-lg transition shadow-md shadow-indigo-600/30">Simpan Perubahan</button>
+                </div>
+              </form>
+            </div>
+          </div>
+
           <script>
             function toggleEmailField() {
-                const type = document.getElementById('licType').value;
-                document.getElementById('emailContainer').style.display = type === 'premium' ? 'block' : 'none';
+              const type = document.getElementById('licType').value;
+              document.getElementById('emailContainer').style.opacity = type === 'premium' ? '1' : '0.7';
+            }
+
+            function copyToClipboard(text) {
+              navigator.clipboard.writeText(text).then(() => {
+                alert('Kode lisensi disalin: ' + text);
+              }).catch(() => {
+                prompt('Salin kode berikut:', text);
+              });
             }
 
             document.getElementById('generateForm').addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const type = document.getElementById('licType').value;
-                const email = document.getElementById('licEmail').value;
+              e.preventDefault();
+              const type = document.getElementById('licType').value;
+              const email = document.getElementById('licEmail').value;
+              const duration = document.getElementById('licDuration').value;
+              const btn = document.getElementById('genBtn');
 
-                if (type === 'premium' && !email) {
-                    alert('Email wajib diisi untuk lisensi premium!');
-                    return;
-                }
+              if (type === 'premium' && !email) {
+                alert('Email pemilik wajib diisi untuk lisensi premium!');
+                return;
+              }
 
-                try {
-                    const res = await fetch('/api/admin/generate', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ type, email })
-                    });
-                    const data = await res.json();
-                    if(data.success) {
-                        window.location.reload();
-                    } else {
-                        alert('Gagal: ' + data.message);
-                    }
-                } catch(err) {
-                    alert('Terjadi kesalahan server.');
+              btn.disabled = true;
+              btn.textContent = 'Memproses...';
+
+              try {
+                const res = await fetch('/api/admin/generate', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ type, email, duration })
+                });
+                const data = await res.json();
+                if (data.success) {
+                  window.location.reload();
+                } else {
+                  alert('Gagal: ' + data.message);
+                  btn.disabled = false;
+                  btn.textContent = 'Generate Lisensi';
                 }
+              } catch(err) {
+                alert('Terjadi kesalahan server.');
+                btn.disabled = false;
+                btn.textContent = 'Generate Lisensi';
+              }
             });
+
+            function openEditModal(license) {
+              document.getElementById('editId').value = license.id;
+              document.getElementById('editCode').value = license.code;
+              document.getElementById('editType').value = license.type;
+              document.getElementById('editEmail').value = license.owner_email || '';
+              document.getElementById('editStatus').value = license.status || 'active';
+              document.getElementById('editDuration').value = 'keep';
+              document.getElementById('editModal').classList.remove('hidden');
+            }
+
+            function closeEditModal() {
+              document.getElementById('editModal').classList.add('hidden');
+            }
+
+            document.getElementById('editForm').addEventListener('submit', async (e) => {
+              e.preventDefault();
+              const id = document.getElementById('editId').value;
+              const type = document.getElementById('editType').value;
+              const email = document.getElementById('editEmail').value;
+              const status = document.getElementById('editStatus').value;
+              const duration = document.getElementById('editDuration').value;
+              const btn = document.getElementById('saveEditBtn');
+
+              btn.disabled = true;
+              btn.textContent = 'Menyimpan...';
+
+              try {
+                const res = await fetch('/api/admin/license/' + id + '/update', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ type, email, status, duration })
+                });
+                const data = await res.json();
+                if (data.success) {
+                  window.location.reload();
+                } else {
+                  alert('Gagal: ' + data.message);
+                  btn.disabled = false;
+                  btn.textContent = 'Simpan Perubahan';
+                }
+              } catch(err) {
+                alert('Terjadi kesalahan jaringan.');
+                btn.disabled = false;
+                btn.textContent = 'Simpan Perubahan';
+              }
+            });
+
+            async function deleteLicense(id) {
+              if (!confirm('Apakah Anda yakin ingin menghapus lisensi ini secara permanen?')) return;
+              try {
+                const res = await fetch('/api/admin/license/' + id + '/delete', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await res.json();
+                if (data.success) {
+                  window.location.reload();
+                } else {
+                  alert('Gagal menghapus: ' + data.message);
+                }
+              } catch(err) {
+                alert('Terjadi kesalahan jaringan.');
+              }
+            }
           </script>
       </body>
       </html>
     `;
     res.send(html);
   } catch (err) {
-    res.send('Error loading dashboard');
+    res.send('Error loading dashboard: ' + err.message);
   }
 });
 
-// 6. Admin Generate API (Protected)
-app.post('/api/admin/generate', requireAuth, async (req, res) => {
-  const { type, email } = req.body;
+// 6. Admin Generate API (Protected - Superadmin Only)
+app.post('/api/admin/generate', requireSuperadmin, async (req, res) => {
+  const { type, email, duration } = req.body;
   if (type === 'premium' && !email) {
-    return res.status(400).json({ success: false, message: 'Email required for premium' });
+    return res.status(400).json({ success: false, message: 'Email wajib diisi untuk lisensi premium' });
   }
 
   const prefix = type === 'premium' ? 'AKA' : 'SHOTAI';
@@ -882,18 +975,261 @@ app.post('/api/admin/generate', requireAuth, async (req, res) => {
   const randomPart2 = Math.random().toString(36).substring(2, 8).toUpperCase();
   const newCode = `${prefix}-${randomPart1}-${randomPart2}`;
 
+  const selectedDuration = duration || '1 Bulan';
+  const expires_at = calculateExpiry(selectedDuration);
+
   try {
     await connectDB();
-    await License.create({ code: newCode, type, owner_email: email || null });
-    res.json({ success: true, code: newCode });
+    const newLic = await License.create({
+      code: newCode,
+      type: type || 'premium',
+      owner_email: email ? email.trim().toLowerCase() : null,
+      duration: selectedDuration,
+      expires_at: expires_at,
+      status: 'active'
+    });
+    res.json({ success: true, code: newCode, license: newLic });
   } catch (err) {
-    res.status(500).json({ success: false, message: 'Database error' });
+    res.status(500).json({ success: false, message: 'Database error: ' + err.message });
+  }
+});
+
+// 6b. Admin Update License API
+app.post('/api/admin/license/:id/update', requireSuperadmin, async (req, res) => {
+  const { id } = req.params;
+  const { type, email, status, duration } = req.body;
+
+  try {
+    await connectDB();
+    const updateData = {};
+    if (type) updateData.type = type;
+    if (email !== undefined) updateData.owner_email = email ? email.trim().toLowerCase() : null;
+    if (status) updateData.status = status;
+
+    if (duration && duration !== 'keep') {
+      updateData.duration = duration;
+      updateData.expires_at = calculateExpiry(duration);
+    }
+
+    const updated = await License.findByIdAndUpdate(id, { $set: updateData }, { new: true });
+    if (!updated) return res.status(404).json({ success: false, message: 'Lisensi tidak ditemukan' });
+
+    res.json({ success: true, message: 'Lisensi berhasil diperbarui', data: updated });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Server error: ' + err.message });
+  }
+});
+
+// 6c. Admin Delete License API
+app.post('/api/admin/license/:id/delete', requireSuperadmin, async (req, res) => {
+  const { id } = req.params;
+  try {
+    await connectDB();
+    const deleted = await License.findByIdAndDelete(id);
+    if (!deleted) return res.status(404).json({ success: false, message: 'Lisensi tidak ditemukan' });
+    res.json({ success: true, message: 'Lisensi berhasil dihapus' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Server error: ' + err.message });
+  }
+});
+
+// === 7. DASHBOARD PELANGGAN (Protected - For Customers) ===
+app.get('/dashboard', requireAuth, async (req, res) => {
+  try {
+    await connectDB();
+    const userEmail = req.user.email ? req.user.email.toLowerCase() : '';
+    const myLicenses = await License.find({ owner_email: userEmail }).sort({ createdAt: -1 });
+
+    const formatDate = (d) => {
+      if (!d) return '-';
+      return new Date(d).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+    };
+
+    let licenseCardsHtml = '';
+    if (myLicenses.length > 0) {
+      myLicenses.forEach(lic => {
+        const isExpired = lic.expires_at && new Date() > new Date(lic.expires_at);
+        licenseCardsHtml += `
+          <div class="bg-[#18181b] border border-[#27272a] rounded-xl p-5 shadow-lg relative overflow-hidden">
+            <div class="flex items-center justify-between mb-3">
+              <span class="${lic.type === 'premium' ? 'bg-purple-950/80 text-purple-300 border border-purple-800/80' : 'bg-blue-950/80 text-blue-300 border border-blue-800/80'} font-bold py-1 px-3 rounded-full text-xs">
+                ${lic.type === 'premium' ? '⭐ PREMIUM LICENSE' : 'FREE LICENSE'}
+              </span>
+              <span class="${isExpired ? 'text-red-400 bg-red-950/50 border border-red-900/50' : 'text-emerald-400 bg-emerald-950/50 border border-emerald-900/50'} text-xs font-semibold px-2.5 py-0.5 rounded-full">
+                ${isExpired ? 'Kadaluarsa' : (lic.status === 'active' ? 'Aktif' : 'Nonaktif')}
+              </span>
+            </div>
+            <div class="mb-4">
+              <label class="block text-[10px] text-gray-400 uppercase font-semibold mb-1">Kode Lisensi Anda</label>
+              <div class="flex items-center gap-2">
+                <span class="font-mono text-base font-bold text-indigo-300 bg-[#09090b] px-3 py-1.5 rounded-lg border border-[#27272a] flex-1 select-all tracking-wider">${lic.code}</span>
+                <button onclick="copyCode('${lic.code}')" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-3 py-2 rounded-lg transition shadow">Salin</button>
+              </div>
+            </div>
+            <div class="text-xs text-gray-400 space-y-1 border-t border-[#27272a] pt-3">
+              <div class="flex justify-between">
+                <span>Masa Aktif:</span>
+                <span class="text-white font-medium">${lic.duration || 'Aktif'}</span>
+              </div>
+              <div class="flex justify-between">
+                <span>Berlaku Sampai:</span>
+                <span class="text-white font-medium">${lic.expires_at ? formatDate(lic.expires_at) : 'Selamanya / Lifetime'}</span>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+    } else {
+      licenseCardsHtml = `
+        <div class="bg-[#18181b] border border-dashed border-[#3f3f46] rounded-xl p-8 text-center">
+          <div class="text-3xl mb-2">🔑</div>
+          <h3 class="text-sm font-bold text-white mb-1">Belum Ada Lisensi Tertaut</h3>
+          <p class="text-xs text-gray-400 max-w-sm mx-auto mb-4">Email ini belum memiliki lisensi terdaftar. Jika Anda sudah membeli lisensi, masukkan kode di bawah ini untuk menautkannya ke akun Anda.</p>
+          <form id="claimForm" class="flex max-w-md mx-auto gap-2">
+            <input type="text" id="claimCode" placeholder="Masukkan kode lisensi..." class="flex-1 p-2 bg-[#09090b] text-white border border-[#27272a] rounded-lg text-xs font-mono uppercase focus:outline-none focus:ring-1 focus:ring-indigo-500">
+            <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-4 py-2 rounded-lg transition">Tautkan</button>
+          </form>
+        </div>
+      `;
+    }
+
+    const html = `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Dashboard Pelanggan - ShotAi</title>
+          <script src="https://cdn.tailwindcss.com"></script>
+          <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+          <style>body { font-family: 'Inter', sans-serif; background-color: #09090b; color: #f1f5f9; min-height: 100vh; }</style>
+      </head>
+      <body class="bg-[#09090b] text-[#f1f5f9]">
+          <div class="min-h-screen p-6 md:p-10 bg-[#09090b]">
+              <div class="max-w-4xl mx-auto space-y-6">
+                  <!-- Header -->
+                  <div class="bg-[#111113] border border-[#27272a] rounded-2xl p-6 flex flex-wrap justify-between items-center gap-4 shadow-xl">
+                      <div class="flex items-center gap-3.5">
+                        <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-purple-900/40 flex-shrink-0">
+                          <span class="text-white font-black text-lg">SA</span>
+                        </div>
+                        <div>
+                          <div class="flex items-center gap-2">
+                            <h1 class="text-lg font-bold text-white">Dashboard Pelanggan</h1>
+                            <span class="bg-emerald-950/80 text-emerald-300 border border-emerald-800/80 text-[10px] font-semibold px-2 py-0.5 rounded-full">Pelanggan</span>
+                          </div>
+                          <p class="text-gray-400 text-xs mt-0.5">${req.user.email}</p>
+                        </div>
+                      </div>
+                      <div class="flex items-center gap-3">
+                        ${req.user.role === 'superadmin' ? '<a href="/admin" class="bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300 border border-indigo-500/40 text-xs font-semibold py-2 px-3 rounded-lg transition">👑 Ke Dashboard Superadmin</a>' : ''}
+                        <a href="/logout" class="bg-white/10 hover:bg-white/20 text-white text-xs font-semibold py-2 px-3.5 rounded-lg transition border border-white/10">Logout</a>
+                      </div>
+                  </div>
+
+                  <!-- Lisensi Saya -->
+                  <div class="bg-[#111113] border border-[#27272a] rounded-2xl p-6 shadow-xl space-y-4">
+                    <div class="flex items-center justify-between">
+                      <h2 class="text-base font-bold text-white flex items-center gap-2">
+                        <span>📦</span>
+                        <span>Lisensi ShotAi Saya</span>
+                      </h2>
+                      <span class="text-xs text-gray-400">${myLicenses.length} Lisensi Tertaut</span>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      ${licenseCardsHtml}
+                    </div>
+                  </div>
+
+                  <!-- Download & Panduan -->
+                  <div class="bg-[#111113] border border-[#27272a] rounded-2xl p-6 shadow-xl">
+                    <h3 class="text-sm font-bold text-white mb-3 flex items-center gap-2">
+                      <span>💻</span> Download & Akses Aplikasi Desktop
+                    </h3>
+                    <p class="text-xs text-gray-400 mb-4 leading-relaxed">
+                      Gunakan aplikasi ShotAi di PC/Laptop Windows Anda untuk menjalankan Google Flow, Dola AI, Grok, ChatGPT, Storyboard Maker, dan Video Karaoke dalam satu desktop workspace.
+                    </p>
+                    <div class="flex flex-wrap gap-3">
+                      <a href="https://shot-ai-new.vercel.app/" class="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-bold px-4 py-2.5 rounded-lg transition shadow-md shadow-indigo-600/30 flex items-center gap-1.5">
+                        <span>⬇️</span> Download untuk Windows
+                      </a>
+                      <a href="https://wa.me/6285261475052" target="_blank" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-4 py-2.5 rounded-lg transition shadow-md flex items-center gap-1.5">
+                        <span>💬</span> WhatsApp Bantuan Pelanggan
+                      </a>
+                    </div>
+                  </div>
+              </div>
+          </div>
+
+          <script>
+            function copyCode(code) {
+              navigator.clipboard.writeText(code).then(() => {
+                alert('Kode lisensi disalin: ' + code);
+              }).catch(() => {
+                prompt('Salin kode berikut:', code);
+              });
+            }
+
+            const claimForm = document.getElementById('claimForm');
+            if (claimForm) {
+              claimForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const code = document.getElementById('claimCode').value;
+                if (!code) return;
+                try {
+                  const res = await fetch('/api/claim-license', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code })
+                  });
+                  const data = await res.json();
+                  if (data.success) {
+                    alert('Lisensi berhasil ditautkan ke akun Anda!');
+                    window.location.reload();
+                  } else {
+                    alert('Gagal: ' + data.message);
+                  }
+                } catch(e) {
+                  alert('Terjadi kesalahan jaringan.');
+                }
+              });
+            }
+          </script>
+      </body>
+      </html>
+    `;
+    res.send(html);
+  } catch (err) {
+    res.send('Error loading dashboard: ' + err.message);
+  }
+});
+
+// 7b. Claim License API (Customer can link license code to their email)
+app.post('/api/claim-license', requireAuth, async (req, res) => {
+  const { code } = req.body;
+  if (!code) return res.status(400).json({ success: false, message: 'Kode lisensi diperlukan' });
+
+  try {
+    await connectDB();
+    const lic = await License.findOne({ code: code.trim().toUpperCase() });
+    if (!lic) return res.status(404).json({ success: false, message: 'Kode lisensi tidak ditemukan' });
+    if (lic.owner_email && lic.owner_email.toLowerCase() !== req.user.email.toLowerCase()) {
+      return res.status(403).json({ success: false, message: 'Lisensi ini sudah tertaut dengan email lain' });
+    }
+
+    lic.owner_email = req.user.email.toLowerCase();
+    await lic.save();
+
+    res.json({ success: true, message: 'Lisensi berhasil ditautkan', data: lic });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Server error: ' + err.message });
   }
 });
 
 // === PUBLIC API FOR ELECTRON APP ===
 
-// 7. Verify License API (Used by PC App)
+// 8. Verify License API (Used by PC App)
 app.post('/api/verify-license', async (req, res) => {
   const { code } = req.body;
   if (!code) return res.status(400).json({ success: false, message: 'Kode lisensi diperlukan.' });
@@ -904,6 +1240,15 @@ app.post('/api/verify-license', async (req, res) => {
     if (!row) return res.status(404).json({ success: false, message: 'Lisensi tidak valid.' });
     if (row.status !== 'active') return res.status(403).json({ success: false, message: 'Lisensi dinonaktifkan.' });
 
+    // Check expiration
+    if (row.expires_at && new Date() > new Date(row.expires_at)) {
+      if (row.status !== 'expired') {
+        row.status = 'expired';
+        await row.save();
+      }
+      return res.status(403).json({ success: false, message: 'Lisensi telah kadaluarsa.' });
+    }
+
     let obfuscatedEmail = null;
     if (row.type === 'premium' && row.owner_email) {
       const parts = row.owner_email.split('@');
@@ -911,13 +1256,21 @@ app.post('/api/verify-license', async (req, res) => {
         obfuscatedEmail = `${parts[0].substring(0, 2)}***@${parts[1]}`;
       }
     }
-    res.json({ success: true, data: { type: row.type, obfuscatedEmail } });
+    res.json({
+      success: true,
+      data: {
+        type: row.type,
+        duration: row.duration || 'Selamanya',
+        expires_at: row.expires_at,
+        obfuscatedEmail
+      }
+    });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Server error' });
   }
 });
 
-// 8. Login Premium API (Used by PC App)
+// 9. Login Premium API (Used by PC App)
 app.post('/api/login-premium', async (req, res) => {
   const { code, email } = req.body;
   if (!code || !email) return res.status(400).json({ success: false, message: 'Kode & email diperlukan.' });
@@ -926,10 +1279,20 @@ app.post('/api/login-premium', async (req, res) => {
     await connectDB();
     const row = await License.findOne({ code: code.trim().toUpperCase(), type: 'premium' });
     if (!row) return res.status(404).json({ success: false, message: 'Lisensi tidak ditemukan.' });
-    if (row.owner_email.toLowerCase() === email.trim().toLowerCase()) {
+
+    // Check expiration
+    if (row.expires_at && new Date() > new Date(row.expires_at)) {
+      if (row.status !== 'expired') {
+        row.status = 'expired';
+        await row.save();
+      }
+      return res.status(403).json({ success: false, message: 'Lisensi telah kadaluarsa.' });
+    }
+
+    if (row.owner_email && row.owner_email.toLowerCase() === email.trim().toLowerCase()) {
       res.json({ success: true, message: 'Berhasil login.' });
     } else {
-      res.status(401).json({ success: false, message: 'Email tidak cocok.' });
+      res.status(401).json({ success: false, message: 'Email tidak cocok dengan pemilik lisensi.' });
     }
   } catch (err) {
     res.status(500).json({ success: false, message: 'Server error' });
