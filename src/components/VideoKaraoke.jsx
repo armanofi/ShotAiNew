@@ -9,7 +9,8 @@ import {
   BarChart2, ZapOff, Square, SkipBack, SkipForward as SkipFwd, Repeat, Type,
   Search, Star, AlignCenter, AlignRight, AlignJustify, Check, Folder, FolderOpen, X,
   MoveHorizontal, Flag, Bookmark, Crop, ZoomIn, RotateCw, FlipHorizontal,
-  Sparkles, Flame, Wind, Zap, Activity
+  Sparkles, Flame, Wind, Zap, Activity,
+  ArrowLeftRight, Split, SlidersHorizontal
 } from 'lucide-react';
 import { applyZoomEffect } from '../utils/videoEffects';
 
@@ -434,6 +435,106 @@ function getEffectThumbnail(effOrItem) {
   if (name.includes('smoke') || name.includes('fog') || name.includes('mist')) return '/assets/Images/Smoke.png';
   if (name.includes('retro') || name.includes('vhs') || name.includes('vintage') || name.includes('film') || name.includes('analog') || name.includes('polaroid') || name.includes('grime') || name.includes('chalky')) return '/assets/Effects/Retro/Images/Images%20Retro.jpeg';
   return '/assets/Images/Linght.png';
+}
+
+/* ─── Studio Transitions Presets & Definitions ───────────────────────── */
+const STUDIO_TRANSITION_CATEGORIES = [
+  { id: 'all', name: 'Semua Transisi' },
+  { id: 'basic', name: 'Dasar & Dissolve' },
+  { id: 'slide', name: 'Slide & Geser' },
+  { id: 'wipe', name: 'Sapu & Bentuk' },
+  { id: 'motion', name: 'Gerak & 3D' },
+];
+
+const STUDIO_TRANSITIONS_LIST = [
+  // ── BASIC & DISSOLVE
+  { id: 'cross_dissolve', name: 'Cross Dissolve', category: 'basic', desc: 'Perpindahan silang halus & natural', iconType: 'dissolve', gradient: 'linear-gradient(135deg, #0ea5e9, #6366f1)' },
+  { id: 'dip_black', name: 'Dip to Black', category: 'basic', desc: 'Memudar ke hitam pekat lalu muncul', iconType: 'fade_black', gradient: 'linear-gradient(135deg, #27272a, #09090b)' },
+  { id: 'dip_white', name: 'Flash White', category: 'basic', desc: 'Kilatan cahaya putih sinematik', iconType: 'flash', gradient: 'linear-gradient(135deg, #e2e8f0, #94a3b8)' },
+  { id: 'blur_dissolve', name: 'Blur Dissolve', category: 'basic', desc: 'Transisi kabur lembut artistik', iconType: 'blur', gradient: 'linear-gradient(135deg, #a855f7, #ec4899)' },
+
+  // ── SLIDE & PUSH
+  { id: 'slide_left', name: 'Slide Left', category: 'slide', desc: 'Klip baru bergeser masuk dari kanan', iconType: 'slide_l', gradient: 'linear-gradient(135deg, #06b6d4, #3b82f6)' },
+  { id: 'slide_right', name: 'Slide Right', category: 'slide', desc: 'Klip baru bergeser masuk dari kiri', iconType: 'slide_r', gradient: 'linear-gradient(135deg, #3b82f6, #06b6d4)' },
+  { id: 'slide_up', name: 'Slide Up', category: 'slide', desc: 'Klip baru bergeser naik dari bawah', iconType: 'slide_u', gradient: 'linear-gradient(135deg, #10b981, #06b6d4)' },
+  { id: 'slide_down', name: 'Slide Down', category: 'slide', desc: 'Klip baru bergeser turun dari atas', iconType: 'slide_d', gradient: 'linear-gradient(135deg, #06b6d4, #10b981)' },
+  { id: 'push_left', name: 'Push Left', category: 'slide', desc: 'Klip baru mendorong klip lama ke kiri', iconType: 'push_l', gradient: 'linear-gradient(135deg, #8b5cf6, #d946ef)' },
+  { id: 'push_right', name: 'Push Right', category: 'slide', desc: 'Klip baru mendorong klip lama ke kanan', iconType: 'push_r', gradient: 'linear-gradient(135deg, #d946ef, #8b5cf6)' },
+
+  // ── WIPE & SHAPES
+  { id: 'wipe_right', name: 'Wipe Right', category: 'wipe', desc: 'Sapu layar tirai horizontal ke kanan', iconType: 'wipe_r', gradient: 'linear-gradient(135deg, #f59e0b, #ef4444)' },
+  { id: 'wipe_left', name: 'Wipe Left', category: 'wipe', desc: 'Sapu layar tirai horizontal ke kiri', iconType: 'wipe_l', gradient: 'linear-gradient(135deg, #ef4444, #f59e0b)' },
+  { id: 'wipe_up', name: 'Wipe Up', category: 'wipe', desc: 'Sapu layar vertikal naik ke atas', iconType: 'wipe_u', gradient: 'linear-gradient(135deg, #14b8a6, #3b82f6)' },
+  { id: 'wipe_down', name: 'Wipe Down', category: 'wipe', desc: 'Sapu layar vertikal turun ke bawah', iconType: 'wipe_d', gradient: 'linear-gradient(135deg, #3b82f6, #14b8a6)' },
+  { id: 'circle_wipe', name: 'Circle Iris', category: 'wipe', desc: 'Bukaan lensa lingkaran dari tengah', iconType: 'circle', gradient: 'linear-gradient(135deg, #ec4899, #f43f5e)' },
+  { id: 'diamond_wipe', name: 'Diamond Wipe', category: 'wipe', desc: 'Bukaan bentuk wajik geometris', iconType: 'diamond', gradient: 'linear-gradient(135deg, #8b5cf6, #3b82f6)' },
+
+  // ── MOTION & 3D
+  { id: 'zoom_in', name: 'Zoom In', category: 'motion', desc: 'Menerobos masuk cepat ke klip baru', iconType: 'zoom_in', gradient: 'linear-gradient(135deg, #f97316, #eab308)' },
+  { id: 'zoom_out', name: 'Zoom Out', category: 'motion', desc: 'Mundur dramatis mengungkap klip baru', iconType: 'zoom_out', gradient: 'linear-gradient(135deg, #eab308, #f97316)' },
+  { id: 'spin_cw', name: 'Spin Rotate', category: 'motion', desc: 'Putaran berputar dinamis 360 derajat', iconType: 'spin', gradient: 'linear-gradient(135deg, #00d8b6, #0284c7)' },
+  { id: 'flip_horizontal', name: '3D Flip', category: 'motion', desc: 'Pembalikan kartu 3D horizontal', iconType: 'flip', gradient: 'linear-gradient(135deg, #6366f1, #a855f7)' },
+  { id: 'glitch', name: 'Glitch Distort', category: 'motion', desc: 'Distorsi digital futuristik cyber', iconType: 'glitch', gradient: 'linear-gradient(135deg, #00f2fe, #4facfe)' },
+];
+
+function TransitionPreviewIcon({ type, isHovered }) {
+  const isSlide = type.startsWith('slide') || type.startsWith('push');
+  const isWipe = type.startsWith('wipe');
+  return (
+    <div style={{ position: 'relative', width: '48px', height: '36px', borderRadius: '4px', overflow: 'hidden', backgroundColor: 'rgba(0,0,0,0.35)', border: '1px solid rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      {type === 'cross_dissolve' && (
+        <div style={{ display: 'flex', gap: '2px', alignItems: 'center' }}>
+          <div style={{ width: '16px', height: '22px', backgroundColor: '#38bdf8', opacity: isHovered ? 0.4 : 0.8, borderRadius: '2px', transition: 'opacity 0.4s' }} />
+          <div style={{ width: '16px', height: '22px', backgroundColor: '#00d8b6', opacity: isHovered ? 0.9 : 0.4, borderRadius: '2px', marginLeft: '-6px', transition: 'opacity 0.4s' }} />
+        </div>
+      )}
+      {type === 'dip_black' && (
+        <div style={{ width: '22px', height: '22px', borderRadius: '50%', backgroundColor: '#09090b', border: '1.5px solid #71717a', transform: isHovered ? 'scale(1.2)' : 'scale(1)', transition: 'transform 0.3s' }} />
+      )}
+      {type === 'dip_white' && (
+        <div style={{ width: '22px', height: '22px', borderRadius: '50%', backgroundColor: '#ffffff', boxShadow: isHovered ? '0 0 14px #ffffff' : '0 0 6px #ffffff', transition: 'box-shadow 0.3s' }} />
+      )}
+      {type === 'blur_dissolve' && (
+        <div style={{ width: '20px', height: '20px', borderRadius: '50%', backgroundColor: '#ec4899', filter: isHovered ? 'blur(4px)' : 'blur(1px)', transition: 'filter 0.3s' }} />
+      )}
+      {isSlide && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '3px', transform: isHovered ? (type.includes('left') ? 'translateX(-4px)' : type.includes('right') ? 'translateX(4px)' : type.includes('up') ? 'translateY(-4px)' : 'translateY(4px)') : 'none', transition: 'transform 0.3s ease' }}>
+          <ArrowLeftRight size={18} color="#ffffff" />
+        </div>
+      )}
+      {isWipe && (
+        <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+          <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(255,255,255,0.2)' }} />
+          <div style={{ position: 'absolute', inset: 0, width: isHovered ? '100%' : '50%', backgroundColor: '#00d8b6', transition: 'width 0.4s ease' }} />
+        </div>
+      )}
+      {type === 'circle_wipe' && (
+        <div style={{ width: isHovered ? '32px' : '14px', height: isHovered ? '32px' : '14px', borderRadius: '50%', backgroundColor: '#00d8b6', transition: 'all 0.3s ease' }} />
+      )}
+      {type === 'diamond_wipe' && (
+        <div style={{ width: isHovered ? '24px' : '12px', height: isHovered ? '24px' : '12px', transform: 'rotate(45deg)', backgroundColor: '#38bdf8', transition: 'all 0.3s ease' }} />
+      )}
+      {type === 'zoom_in' && (
+        <div style={{ width: '18px', height: '18px', border: '2px solid #ffffff', borderRadius: '3px', transform: isHovered ? 'scale(1.4)' : 'scale(0.8)', transition: 'transform 0.3s ease' }} />
+      )}
+      {type === 'zoom_out' && (
+        <div style={{ width: '18px', height: '18px', border: '2px solid #ffffff', borderRadius: '3px', transform: isHovered ? 'scale(0.7)' : 'scale(1.2)', transition: 'transform 0.3s ease' }} />
+      )}
+      {type === 'spin_cw' && (
+        <div style={{ transform: isHovered ? 'rotate(180deg)' : 'none', transition: 'transform 0.5s ease' }}>
+          <RotateCw size={18} color="#ffffff" />
+        </div>
+      )}
+      {type === 'flip_horizontal' && (
+        <div style={{ transform: isHovered ? 'perspective(200px) rotateY(180deg)' : 'none', transition: 'transform 0.5s ease' }}>
+          <FlipHorizontal size={18} color="#ffffff" />
+        </div>
+      )}
+      {type === 'glitch' && (
+        <div style={{ position: 'relative', width: '22px', height: '14px', backgroundColor: '#00d8b6', boxShadow: isHovered ? '-2px 0 #ef4444, 2px 0 #3b82f6' : 'none', transition: 'box-shadow 0.2s' }} />
+      )}
+    </div>
+  );
 }
 
 function getTrackHeight(track) {
@@ -936,7 +1037,7 @@ function AudioWaveformCanvas({ file, currentTime, duration, sourceStart = 0, sou
 }
 
 /* ─── Timeline Track (Multi-Track Kolam) ─────────────────────── */
-function TimelineTrack({ tracks, setTracks, lines, setLines, duration, currentTime, onSeek, selectedLineIdx, setSelectedLineIdx, selectedTrackItemId, setSelectedTrackItemId, onRemoveTrack, zoom, setZoom, onStatusChange, setIsPlaying, setAudioUrl, audioRef, videoRef, videoAudioRef, stopMediaBinPreview, clipboardItem: externalClipboardItem, setClipboardItem: externalSetClipboardItem, markers = [], setMarkers, useLyricsVersion = true, coverPhotoUrl, setCoverPhotoUrl }) {
+function TimelineTrack({ tracks, setTracks, lines, setLines, duration, currentTime, onSeek, selectedLineIdx, setSelectedLineIdx, selectedTrackItemId, setSelectedTrackItemId, onRemoveTrack, zoom, setZoom, onStatusChange, setIsPlaying, setAudioUrl, audioRef, videoRef, videoAudioRef, stopMediaBinPreview, clipboardItem: externalClipboardItem, setClipboardItem: externalSetClipboardItem, markers = [], setMarkers, useLyricsVersion = true, coverPhotoUrl, setCoverPhotoUrl, selectedTransitionItem, setSelectedTransitionItem, setEditorTab }) {
   const scrollRef = useRef(null);
   const rulerRef = useRef(null);
   const headerScrollRef = useRef(null);
@@ -2965,7 +3066,7 @@ function TimelineTrack({ tracks, setTracks, lines, setLines, duration, currentTi
                     </div>
                   )}
               
-              {track.items.map(item => {
+              {track.items.map((item, itemIdx) => {
                 const isDraggingThis = draggingItem?.type === 'trackItem' && draggingItem?.itemId === item.id;
                 
                 let dStart = item.start;
@@ -3376,6 +3477,89 @@ function TimelineTrack({ tracks, setTracks, lines, setLines, duration, currentTi
                         );
                       }
                     })()}
+
+                    {/* Visual Transition Badge at the Cut Junction between clips */}
+                    {(track.type === 'video' || track.type === 'image') && !track.locked && (
+                      <>
+                        {item.transition ? (
+                          <div
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              e.preventDefault();
+                              if (setSelectedTransitionItem) setSelectedTransitionItem(item);
+                              if (setSelectedTrackItemId) setSelectedTrackItemId(item.id);
+                              if (setEditorTab) setEditorTab('transitions');
+                            }}
+                            title={`Transisi: ${item.transition.name || item.transition.id} (${item.transition.duration || 1}s) - Klik untuk mengedit`}
+                            style={{
+                              position: 'absolute',
+                              left: '-11px',
+                              top: '50%',
+                              transform: 'translateY(-50%)',
+                              width: '22px',
+                              height: '22px',
+                              borderRadius: '5px',
+                              backgroundColor: selectedTransitionItem?.id === item.id ? '#00d8b6' : '#18181b',
+                              border: selectedTransitionItem?.id === item.id ? '2px solid #ffffff' : '1.5px solid #00d8b6',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              zIndex: 70,
+                              cursor: 'pointer',
+                              boxShadow: selectedTransitionItem?.id === item.id ? '0 0 10px rgba(0, 216, 182, 0.9)' : '0 2px 6px rgba(0,0,0,0.8)',
+                              transition: 'all 0.15s ease'
+                            }}
+                          >
+                            <ArrowLeftRight size={12} color={selectedTransitionItem?.id === item.id ? '#09090b' : '#00d8b6'} strokeWidth={2.5} />
+                          </div>
+                        ) : (
+                          itemIdx > 0 && Math.abs(item.start - track.items[itemIdx - 1]?.end) < 0.25 && (
+                            <div
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                e.preventDefault();
+                                if (setSelectedTransitionItem) setSelectedTransitionItem(item);
+                                if (setSelectedTrackItemId) setSelectedTrackItemId(item.id);
+                                if (setEditorTab) setEditorTab('transitions');
+                              }}
+                              title="Klik untuk menambahkan transisi pada sambungan ini"
+                              style={{
+                                position: 'absolute',
+                                left: '-9px',
+                                top: '50%',
+                                transform: 'translateY(-50%)',
+                                width: '18px',
+                                height: '18px',
+                                borderRadius: '4px',
+                                backgroundColor: 'rgba(24, 24, 27, 0.85)',
+                                border: '1px dashed rgba(255, 255, 255, 0.4)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                zIndex: 50,
+                                cursor: 'pointer',
+                                opacity: 0.65,
+                                transition: 'all 0.15s ease'
+                              }}
+                              onMouseEnter={e => {
+                                e.currentTarget.style.opacity = '1';
+                                e.currentTarget.style.borderColor = '#00d8b6';
+                                e.currentTarget.style.backgroundColor = '#18181b';
+                                e.currentTarget.style.transform = 'translateY(-50%) scale(1.15)';
+                              }}
+                              onMouseLeave={e => {
+                                e.currentTarget.style.opacity = '0.65';
+                                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.4)';
+                                e.currentTarget.style.backgroundColor = 'rgba(24, 24, 27, 0.85)';
+                                e.currentTarget.style.transform = 'translateY(-50%) scale(1)';
+                              }}
+                            >
+                              <ArrowLeftRight size={10} color="#a1a1aa" strokeWidth={2} />
+                            </div>
+                          )
+                        )}
+                      </>
+                    )}
                   </div>
                 );
               })}
@@ -4141,6 +4325,224 @@ function StereoVuMeter({ isPlaying, currentTime = 0, tracks = [], actualHoveredM
   );
 }
 
+/* ─── Visual Transition Engine Helper (Video-to-Video, Image-to-Image, Video-to-Image, Image-to-Video) ─── */
+const computeTransitionStyle = (item, track, tracks, currentTime) => {
+  const isActive = currentTime >= item.start && currentTime <= item.end;
+  
+  // 1. Incoming transition on this item
+  const hasInTrans = Boolean(item.transition);
+  const transInDur = item.transition?.duration || 1.0;
+  const isTransitioningIn = hasInTrans && (currentTime >= item.start && currentTime <= item.start + transInDur);
+  const progressIn = isTransitioningIn ? Math.max(0, Math.min(1, (currentTime - item.start) / transInDur)) : (currentTime > item.start + transInDur ? 1 : 0);
+
+  // 2. Outgoing transition (check adjoining next item on same track or across visual tracks)
+  let nextTransItem = (track?.items || []).find(other => other.id !== item.id && Math.abs(other.start - item.end) < 0.25 && other.transition);
+  if (!nextTransItem && tracks) {
+    for (const otherTrack of tracks) {
+      if (otherTrack.type !== 'video' && otherTrack.type !== 'image') continue;
+      const found = (otherTrack.items || []).find(other => other.id !== item.id && Math.abs(other.start - item.end) < 0.25 && other.transition);
+      if (found) {
+        nextTransItem = found;
+        break;
+      }
+    }
+  }
+
+  const transOutDur = nextTransItem?.transition?.duration || 1.0;
+  const isTransitioningOut = Boolean(nextTransItem && (currentTime >= nextTransItem.start && currentTime <= nextTransItem.start + transOutDur));
+  const progressOut = isTransitioningOut ? Math.max(0, Math.min(1, (currentTime - nextTransItem.start) / transOutDur)) : 0;
+  const outTransition = nextTransItem?.transition;
+
+  const isVisible = isActive || isTransitioningOut;
+  if (!isVisible) {
+    return {
+      isVisible: false,
+      isTransitioningIn: false,
+      isTransitioningOut: false,
+      transOpacity: 0,
+      transTransform: '',
+      transClipPath: null,
+      transFilter: '',
+      transZIndexOffset: 0
+    };
+  }
+
+  let transOpacity = 1;
+  let transTransform = '';
+  let transClipPath = null;
+  let transFilter = '';
+  let transZIndexOffset = 0;
+
+  if (isTransitioningIn) {
+    const p = progressIn;
+    const preset = item.transition.id || item.transition.presetId || 'cross_dissolve';
+    transZIndexOffset = 3;
+
+    switch (preset) {
+      case 'cross_dissolve':
+        transOpacity = p;
+        break;
+      case 'dip_black':
+        transOpacity = p <= 0.5 ? 0 : (p - 0.5) * 2;
+        break;
+      case 'dip_white':
+        transOpacity = p <= 0.5 ? 0 : (p - 0.5) * 2;
+        if (p > 0.5) transFilter = `brightness(${1 + (1 - p) * 3})`;
+        break;
+      case 'blur_dissolve':
+        transOpacity = p;
+        transFilter = `blur(${((1 - p) * 12).toFixed(1)}px)`;
+        break;
+      case 'slide_left':
+        transTransform = `translateX(${((1 - p) * 100).toFixed(1)}%)`;
+        break;
+      case 'slide_right':
+        transTransform = `translateX(${(-(1 - p) * 100).toFixed(1)}%)`;
+        break;
+      case 'slide_up':
+        transTransform = `translateY(${((1 - p) * 100).toFixed(1)}%)`;
+        break;
+      case 'slide_down':
+        transTransform = `translateY(${(-(1 - p) * 100).toFixed(1)}%)`;
+        break;
+      case 'push_left':
+        transTransform = `translateX(${((1 - p) * 100).toFixed(1)}%)`;
+        break;
+      case 'push_right':
+        transTransform = `translateX(${(-(1 - p) * 100).toFixed(1)}%)`;
+        break;
+      case 'wipe_right':
+        transClipPath = `inset(0 ${((1 - p) * 100).toFixed(1)}% 0 0)`;
+        break;
+      case 'wipe_left':
+        transClipPath = `inset(0 0 0 ${((1 - p) * 100).toFixed(1)}%)`;
+        break;
+      case 'wipe_up':
+        transClipPath = `inset(0 0 ${((1 - p) * 100).toFixed(1)}% 0)`;
+        break;
+      case 'wipe_down':
+        transClipPath = `inset(${((1 - p) * 100).toFixed(1)}% 0 0 0)`;
+        break;
+      case 'circle_wipe':
+        transClipPath = `circle(${(p * 80).toFixed(1)}% at 50% 50%)`;
+        break;
+      case 'diamond_wipe': {
+        const d = p * 60;
+        transClipPath = `polygon(50% ${(50 - d).toFixed(1)}%, ${(50 + d).toFixed(1)}% 50%, 50% ${(50 + d).toFixed(1)}%, ${(50 - d).toFixed(1)}% 50%)`;
+        break;
+      }
+      case 'zoom_in': {
+        const sc = 0.3 + p * 0.7;
+        transTransform = `scale(${sc.toFixed(2)})`;
+        transOpacity = Math.min(1, p * 2);
+        break;
+      }
+      case 'zoom_out': {
+        const sc = 1.8 - p * 0.8;
+        transTransform = `scale(${sc.toFixed(2)})`;
+        transOpacity = Math.min(1, p * 2);
+        break;
+      }
+      case 'spin_cw':
+        transTransform = `rotate(${((1 - p) * 180).toFixed(1)}deg) scale(${(0.2 + p * 0.8).toFixed(2)})`;
+        transOpacity = p;
+        break;
+      case 'flip_horizontal':
+        transTransform = `perspective(800px) rotateY(${(-(1 - p) * 180).toFixed(1)}deg)`;
+        transOpacity = p >= 0.5 ? 1 : 0;
+        break;
+      case 'glitch': {
+        const gx = Math.sin(p * 25) * (1 - p) * 20;
+        transTransform = `translateX(${gx.toFixed(1)}px)`;
+        transFilter = `hue-rotate(${(p * 180).toFixed(0)}deg)`;
+        transOpacity = p > 0.15 ? 1 : p * 6;
+        break;
+      }
+      default:
+        transOpacity = p;
+        break;
+    }
+  } else if (isTransitioningOut && outTransition) {
+    const p = progressOut;
+    const preset = outTransition.id || outTransition.presetId || 'cross_dissolve';
+    transZIndexOffset = 1;
+
+    switch (preset) {
+      case 'cross_dissolve':
+        transOpacity = 1;
+        break;
+      case 'dip_black':
+        transOpacity = p <= 0.5 ? (1 - p * 2) : 0;
+        break;
+      case 'dip_white':
+        transOpacity = p <= 0.5 ? 1 : 0;
+        if (p <= 0.5) transFilter = `brightness(${1 + p * 4})`;
+        break;
+      case 'blur_dissolve':
+        transOpacity = 1 - p * 0.6;
+        transFilter = `blur(${(p * 12).toFixed(1)}px)`;
+        break;
+      case 'slide_left':
+      case 'slide_right':
+      case 'slide_up':
+      case 'slide_down':
+        transOpacity = 1;
+        break;
+      case 'push_left':
+        transTransform = `translateX(${(-p * 100).toFixed(1)}%)`;
+        break;
+      case 'push_right':
+        transTransform = `translateX(${(p * 100).toFixed(1)}%)`;
+        break;
+      case 'wipe_right':
+      case 'wipe_left':
+      case 'wipe_up':
+      case 'wipe_down':
+      case 'circle_wipe':
+      case 'diamond_wipe':
+        transOpacity = 1;
+        break;
+      case 'zoom_in':
+        transOpacity = 1 - p * 0.5;
+        transTransform = `scale(${(1 - p * 0.15).toFixed(2)})`;
+        break;
+      case 'zoom_out':
+        transOpacity = 1 - p * 0.5;
+        transTransform = `scale(${(1 + p * 0.15).toFixed(2)})`;
+        break;
+      case 'spin_cw':
+        transOpacity = 1 - p;
+        transTransform = `rotate(${(-p * 90).toFixed(1)}deg) scale(${(1 - p * 0.3).toFixed(2)})`;
+        break;
+      case 'flip_horizontal':
+        transTransform = `perspective(800px) rotateY(${(p * 180).toFixed(1)}deg)`;
+        transOpacity = p < 0.5 ? 1 : 0;
+        break;
+      case 'glitch': {
+        const gx = -Math.sin(p * 25) * p * 15;
+        transTransform = `translateX(${gx.toFixed(1)}px)`;
+        transFilter = `hue-rotate(${(-p * 90).toFixed(0)}deg)`;
+        transOpacity = 1 - p * 0.7;
+        break;
+      }
+      default:
+        transOpacity = 1 - p;
+        break;
+    }
+  }
+
+  return {
+    isVisible,
+    isTransitioningIn,
+    isTransitioningOut,
+    transOpacity,
+    transTransform,
+    transClipPath,
+    transFilter,
+    transZIndexOffset
+  };
+};
+
 /* ─── Karaoke Preview — Full-width, multi-line, synced ──────── */
 function KaraokePreview({
   preset, aspectRatio, font, lines, currentTime, isPlaying,
@@ -4338,8 +4740,21 @@ function KaraokePreview({
         const el = mediaRefs.current[item.id];
         if (!el || el.tagName !== 'VIDEO') return;
         
-        const t = item.transform || {};
         const isActive = currentTime >= item.start && currentTime <= item.end;
+
+        let nextTransItem = (track?.items || []).find(other => other.id !== item.id && Math.abs(other.start - item.end) < 0.25 && other.transition);
+        if (!nextTransItem && tracks) {
+          for (const otherTrack of tracks) {
+            if (otherTrack.type !== 'video' && otherTrack.type !== 'image') continue;
+            const found = (otherTrack.items || []).find(other => other.id !== item.id && Math.abs(other.start - item.end) < 0.25 && other.transition);
+            if (found) {
+              nextTransItem = found;
+              break;
+            }
+          }
+        }
+        const transOutDur = nextTransItem?.transition?.duration || 1.0;
+        const isTransitioningOut = Boolean(nextTransItem && (currentTime >= nextTransItem.start && currentTime <= nextTransItem.start + transOutDur));
 
         if (item.isEffect) {
           el.muted = true;
@@ -4373,6 +4788,17 @@ function KaraokePreview({
             } else if (!isPlaying && !el.paused) {
                 el.pause();
                 window.__shotaiActiveAudioElements?.delete(el);
+            }
+        } else if (isTransitioningOut) {
+            // Outgoing transition: hold video frame at clip end so it seamlessly transitions out without flickering
+            const speed = typeof t.speed !== 'undefined' ? t.speed : 1;
+            const clipDur = (item.end - item.start);
+            const endVideoTime = ((item.sourceStart || 0) * speed) + (clipDur * speed);
+            if (Math.abs(el.currentTime - endVideoTime) > 0.3) {
+              el.currentTime = endVideoTime;
+            }
+            if (!el.paused) {
+              el.pause();
             }
         } else {
             if (!el.paused) el.pause();
@@ -4934,6 +5360,14 @@ function KaraokePreview({
                     />
                   );
                 } else if (track.type === 'video') {
+                  const transStyle = computeTransitionStyle(item, track, tracks, currentTime);
+                  const isVisible = transStyle.isVisible;
+                  const finalZ = z + transStyle.transZIndexOffset;
+                  const baseTransform = `translate(${tx}px, ${ty}px) scale(${sc * mirrorScaleX}, ${sc}) rotate(${rot}deg)`;
+                  const finalTransform = transStyle.transTransform ? `${baseTransform} ${transStyle.transTransform}` : baseTransform;
+                  const finalFilter = [t.filter && t.filter !== 'none' ? t.filter : '', transStyle.transFilter].filter(Boolean).join(' ') || 'none';
+                  const finalOpacity = op * transStyle.transOpacity;
+
                   return (
                     <video
                       key={item.id}
@@ -4947,25 +5381,34 @@ function KaraokePreview({
                         if (e.target.videoWidth && e.target.videoHeight) setOriginalDim({ w: e.target.videoWidth, h: e.target.videoHeight });
                       }}
                       style={{ 
-                        display: isActive ? 'block' : 'none',
+                        display: isVisible ? 'block' : 'none',
                         position: 'absolute', inset: 0, width: '100%', height: '100%',
                         objectFit: cropRatio ? 'contain' : 'cover',
                         aspectRatio: cropRatio || 'auto',
-                        zIndex: z,
-                        transform: `translate(${tx}px, ${ty}px) scale(${sc * mirrorScaleX}, ${sc}) rotate(${rot}deg)`,
+                        zIndex: finalZ,
+                        transform: finalTransform,
                         transformOrigin: 'center center',
-                        willChange: 'transform',
+                        clipPath: transStyle.transClipPath || undefined,
+                        willChange: 'transform, opacity',
                         cursor: isSelected ? (dragState?.mode === 'move' ? 'grabbing' : 'grab') : 'pointer',
                         border: isSelected ? '1.5px dashed #00d8b6' : 'none',
-                        opacity: op,
+                        opacity: finalOpacity,
                         mixBlendMode: bm,
-                        filter: t.filter || 'none',
+                        filter: finalFilter,
                         boxSizing: 'border-box',
                         pointerEvents: isSelected || !dragState ? 'auto' : 'none'
                       }}
                     />
                   );
                 } else if (track.type === 'image') {
+                  const transStyle = computeTransitionStyle(item, track, tracks, currentTime);
+                  const isVisible = transStyle.isVisible;
+                  const finalZ = z + transStyle.transZIndexOffset;
+                  const baseTransform = `translate(${tx}px, ${ty}px) scale(${sc * mirrorScaleX}, ${sc}) rotate(${rot}deg)`;
+                  const finalTransform = transStyle.transTransform ? `${baseTransform} ${transStyle.transTransform}` : baseTransform;
+                  const finalFilter = [t.filter && t.filter !== 'none' ? t.filter : '', transStyle.transFilter].filter(Boolean).join(' ') || 'none';
+                  const finalOpacity = op * transStyle.transOpacity;
+
                   return (
                     <img
                       key={item.id}
@@ -4975,19 +5418,20 @@ function KaraokePreview({
                         if (e.target.naturalWidth && e.target.naturalHeight) setOriginalDim({ w: e.target.naturalWidth, h: e.target.naturalHeight });
                       }}
                       style={{ 
-                        display: isActive ? 'block' : 'none',
+                        display: isVisible ? 'block' : 'none',
                         position: 'absolute', inset: 0, width: '100%', height: '100%',
                         objectFit: cropRatio ? 'contain' : 'cover',
                         aspectRatio: cropRatio || 'auto',
-                        zIndex: z,
-                        transform: `translate(${tx}px, ${ty}px) scale(${sc * mirrorScaleX}, ${sc}) rotate(${rot}deg)`,
+                        zIndex: finalZ,
+                        transform: finalTransform,
                         transformOrigin: 'center center',
-                        willChange: 'transform',
+                        clipPath: transStyle.transClipPath || undefined,
+                        willChange: 'transform, opacity',
                         cursor: isSelected ? (dragState?.mode === 'move' ? 'grabbing' : 'grab') : 'pointer',
                         border: isSelected ? '1.5px dashed #00d8b6' : 'none',
-                        opacity: op,
+                        opacity: finalOpacity,
                         mixBlendMode: bm,
-                        filter: t.filter || 'none',
+                        filter: finalFilter,
                         boxSizing: 'border-box'
                       }}
                     />
@@ -5324,10 +5768,15 @@ export default function VideoKaraoke({ onBack }) {
   const rafRef = useRef(null);
 
   // ── Editor state
-  const [editorTab, setEditorTab] = useState('media'); // 'media' | 'caption' | 'text' | 'effects' | 'audio'
+  const [editorTab, setEditorTab] = useState('media'); // 'media' | 'caption' | 'text' | 'effects' | 'transitions' | 'audio'
   const [effectCategory, setEffectCategory] = useState('all');
   const [effectSearch, setEffectSearch] = useState('');
   const [hoveredEffectId, setHoveredEffectId] = useState(null);
+  const [transitionCategory, setTransitionCategory] = useState('all');
+  const [transitionSearch, setTransitionSearch] = useState('');
+  const [transitionDuration, setTransitionDuration] = useState(1.0);
+  const [hoveredTransitionId, setHoveredTransitionId] = useState(null);
+  const [selectedTransitionItem, setSelectedTransitionItem] = useState(null);
   const [timelineZoom, setTimelineZoom] = useState(0); // Default to fully zoomed out or reasonable level
   const [aspectRatio, setAspectRatio] = useState('original');
   const [lines, setLines] = useState([]);
@@ -5867,6 +6316,103 @@ export default function VideoKaraoke({ onBack }) {
 
     setDuration(prev => Math.max(prev, endPos));
     setSelectedTrackItemId(itemId);
+  };
+
+  // ── Transition Handlers (Applies to Video-to-Video, Image-to-Image, Video-to-Image, Image-to-Video) ──
+  const handleApplyTransition = (transPreset, targetItemId = null) => {
+    setTracks(prevTracks => {
+      let candidateItemId = targetItemId || selectedTransitionItem?.id || selectedTrackItemId;
+      
+      // If no valid visual item selected, find closest visual clip to currentTime
+      if (!candidateItemId) {
+        const visualItems = prevTracks
+          .filter(t => !t.isEffectTrack && t.type !== 'effect' && (t.type === 'video' || t.type === 'image'))
+          .flatMap(t => t.items || [])
+          .sort((a, b) => a.start - b.start);
+        
+        // Find item that starts near currentTime or right after
+        const itemAtOrAfter = visualItems.find(it => Math.abs(it.start - currentTime) <= 0.5) ||
+                              visualItems.find(it => it.start >= currentTime) ||
+                              visualItems[visualItems.length - 1];
+        if (itemAtOrAfter) candidateItemId = itemAtOrAfter.id;
+      }
+
+      if (!candidateItemId) {
+        alert('Silakan pilih klip video atau gambar di timeline terlebih dahulu untuk memasang transisi.');
+        return prevTracks;
+      }
+
+      return prevTracks.map(t => {
+        if (!t.items || t.items.length === 0) return t;
+        return {
+          ...t,
+          items: t.items.map(it => {
+            if (it.id !== candidateItemId) return it;
+            const updatedItem = {
+              ...it,
+              transition: {
+                id: transPreset.id,
+                presetId: transPreset.id,
+                name: transPreset.name,
+                duration: transitionDuration || 1.0,
+                category: transPreset.category
+              }
+            };
+            setSelectedTransitionItem(updatedItem);
+            return updatedItem;
+          })
+        };
+      });
+    });
+  };
+
+  const handleApplyTransitionToAll = (transPreset) => {
+    let appliedCount = 0;
+    setTracks(prevTracks => {
+      return prevTracks.map(t => {
+        if (t.isEffectTrack || t.type === 'effect' || t.type === 'audio' || !t.items || t.items.length < 2) return t;
+        const sortedItems = [...t.items].sort((a, b) => a.start - b.start);
+        return {
+          ...t,
+          items: t.items.map(it => {
+            const idx = sortedItems.findIndex(s => s.id === it.id);
+            // Apply to all items that have an adjoining predecessor
+            if (idx > 0 && Math.abs(it.start - sortedItems[idx - 1].end) < 0.25) {
+              appliedCount++;
+              return {
+                ...it,
+                transition: {
+                  id: transPreset.id,
+                  presetId: transPreset.id,
+                  name: transPreset.name,
+                  duration: transitionDuration || 1.0,
+                  category: transPreset.category
+                }
+              };
+            }
+            return it;
+          })
+        };
+      });
+    });
+  };
+
+  const handleRemoveTransition = (itemId) => {
+    setTracks(prevTracks => {
+      return prevTracks.map(t => ({
+        ...t,
+        items: (t.items || []).map(it => {
+          if (it.id === itemId) {
+            const { transition, ...rest } = it;
+            return rest;
+          }
+          return it;
+        })
+      }));
+    });
+    if (selectedTransitionItem?.id === itemId) {
+      setSelectedTransitionItem(null);
+    }
   };
 
   const [stems, setStems] = useState([
@@ -7891,11 +8437,12 @@ STRICT ALIGNMENT RULES:
 
   /* ════════════════ CAPCUT DESKTOP MASTER LAYOUT ════════════════ */
   const STUDIO_TABS = [
-    { id: 'media',   label: 'Media',   icon: Film },
-    { id: 'caption', label: 'Caption', icon: FileText },
-    { id: 'text',    label: 'Text',    icon: Type },
-    { id: 'effects', label: 'Effects', icon: Sparkles },
-    { id: 'audio',   label: 'Audio',   icon: Headphones },
+    { id: 'media',       label: 'Media',       icon: Film },
+    { id: 'caption',     label: 'Caption',     icon: FileText },
+    { id: 'text',        label: 'Text',        icon: Type },
+    { id: 'effects',     label: 'Effects',     icon: Sparkles },
+    { id: 'transitions', label: 'Transitions', icon: ArrowLeftRight },
+    { id: 'audio',       label: 'Audio',       icon: Headphones },
   ];
 
   return (
@@ -8574,6 +9121,259 @@ STRICT ALIGNMENT RULES:
                     </div>
                   </div>
 
+                </div>
+              )}
+
+              {/* TAB TRANSITIONS */}
+              {editorTab === 'transitions' && (
+                <div style={{ display: 'flex', flexDirection: 'row', height: '100%', margin: '-10px', backgroundColor: '#18181b' }}>
+                  
+                  {/* Left Column - Kategori Transisi */}
+                  <div style={{ width: '36%', borderRight: '1px solid #27272a', padding: '10px 6px', display: 'flex', flexDirection: 'column', gap: '4px', overflowY: 'auto', scrollbarColor: '#3f3f46 #18181b', scrollbarWidth: 'thin' }}>
+                    <div style={{ padding: '4px 8px', fontSize: '10px', fontWeight: 700, color: '#71717a', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      Kategori
+                    </div>
+                    {STUDIO_TRANSITION_CATEGORIES.map(cat => {
+                      const isCatActive = transitionCategory === cat.id;
+                      const count = cat.id === 'all'
+                        ? STUDIO_TRANSITIONS_LIST.length
+                        : STUDIO_TRANSITIONS_LIST.filter(t => t.category === cat.id).length;
+                      return (
+                        <button
+                          key={cat.id}
+                          onClick={() => setTransitionCategory(cat.id)}
+                          style={{
+                            padding: '7px 9px',
+                            borderRadius: '6px',
+                            backgroundColor: isCatActive ? 'rgba(0, 216, 182, 0.12)' : 'transparent',
+                            border: isCatActive ? '1px solid rgba(0, 216, 182, 0.35)' : '1px solid transparent',
+                            color: isCatActive ? '#00d8b6' : '#a1a1aa',
+                            fontSize: '11px',
+                            fontWeight: isCatActive ? 700 : 500,
+                            cursor: 'pointer',
+                            textAlign: 'left',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            transition: 'all 0.15s'
+                          }}
+                          onMouseEnter={e => { if (!isCatActive) e.currentTarget.style.backgroundColor = '#27272a'; }}
+                          onMouseLeave={e => { if (!isCatActive) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                        >
+                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cat.name}</span>
+                          <span style={{ fontSize: '9px', opacity: 0.6, flexShrink: 0 }}>{count}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Right Column - Grid Kartu Transisi & Kontrol */}
+                  <div style={{ width: '64%', padding: '10px', backgroundColor: '#111113', display: 'flex', flexDirection: 'column', gap: '8px', overflowY: 'auto', scrollbarColor: '#3f3f46 #111113', scrollbarWidth: 'thin' }}>
+                    
+                    {/* Selected Clip & Transition Info Banner */}
+                    {selectedTransitionItem && (
+                      <div style={{ padding: '8px 10px', borderRadius: '6px', backgroundColor: 'rgba(0, 216, 182, 0.08)', border: '1px solid rgba(0, 216, 182, 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', overflow: 'hidden' }}>
+                          <span style={{ fontSize: '10px', fontWeight: 700, color: '#00d8b6', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                            Klip Terpilih:
+                          </span>
+                          <span style={{ fontSize: '11px', fontWeight: 600, color: '#f4f4f5', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
+                            {selectedTransitionItem.name || 'Visual Media'}
+                            {selectedTransitionItem.transition && (
+                              <span style={{ color: '#38bdf8', marginLeft: '6px', fontWeight: 500 }}>
+                                ({selectedTransitionItem.transition.name || selectedTransitionItem.transition.id} • {selectedTransitionItem.transition.duration}s)
+                              </span>
+                            )}
+                          </span>
+                        </div>
+                        {selectedTransitionItem.transition && (
+                          <button
+                            onClick={() => handleRemoveTransition(selectedTransitionItem.id)}
+                            title="Hapus transisi dari klip ini"
+                            style={{
+                              padding: '4px 8px',
+                              borderRadius: '4px',
+                              backgroundColor: 'rgba(239, 68, 68, 0.15)',
+                              border: '1px solid rgba(239, 68, 68, 0.3)',
+                              color: '#ef4444',
+                              fontSize: '10px',
+                              fontWeight: 600,
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              flexShrink: 0
+                            }}
+                          >
+                            <Trash2 size={11} />
+                            Hapus
+                          </button>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Search Input */}
+                    <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                      <Search size={12} style={{ position: 'absolute', left: '9px', color: '#71717a' }} />
+                      <input
+                        type="text"
+                        placeholder="Cari transisi..."
+                        value={transitionSearch}
+                        onChange={e => setTransitionSearch(e.target.value)}
+                        style={{
+                          width: '100%',
+                          backgroundColor: '#18181b',
+                          border: '1px solid #27272a',
+                          borderRadius: '6px',
+                          padding: '6px 8px 6px 26px',
+                          fontSize: '11px',
+                          color: '#f4f4f5',
+                          outline: 'none',
+                          fontFamily: 'inherit'
+                        }}
+                      />
+                      {transitionSearch && (
+                        <button onClick={() => setTransitionSearch('')} style={{ position: 'absolute', right: '8px', background: 'none', border: 'none', color: '#71717a', cursor: 'pointer' }}>
+                          <X size={11} />
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Duration Preset Controls */}
+                    <div style={{ padding: '8px', borderRadius: '6px', backgroundColor: '#18181b', border: '1px solid #27272a', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span style={{ fontSize: '10px', fontWeight: 600, color: '#a1a1aa' }}>Durasi Transisi:</span>
+                        <span style={{ fontSize: '11px', fontWeight: 700, color: '#00d8b6' }}>{transitionDuration}s</span>
+                      </div>
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        {[0.5, 0.8, 1.0, 1.5, 2.0].map(dur => (
+                          <button
+                            key={dur}
+                            onClick={() => setTransitionDuration(dur)}
+                            style={{
+                              flex: 1,
+                              padding: '3px 0',
+                              fontSize: '10px',
+                              fontWeight: transitionDuration === dur ? 700 : 500,
+                              borderRadius: '4px',
+                              border: transitionDuration === dur ? '1px solid #00d8b6' : '1px solid #27272a',
+                              backgroundColor: transitionDuration === dur ? 'rgba(0, 216, 182, 0.15)' : 'transparent',
+                              color: transitionDuration === dur ? '#00d8b6' : '#a1a1aa',
+                              cursor: 'pointer',
+                              transition: 'all 0.15s'
+                            }}
+                          >
+                            {dur}s
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Quick Hint Pill */}
+                    <div style={{ padding: '6px 8px', borderRadius: '6px', backgroundColor: '#18181b', border: '1px solid #27272a', fontSize: '10px', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <ArrowLeftRight size={12} style={{ color: '#00d8b6', flexShrink: 0 }} />
+                      <span>Berlaku untuk Video-Video, Gambar-Gambar, & Video-Gambar.</span>
+                    </div>
+
+                    {/* Grid Cards */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
+                      {STUDIO_TRANSITIONS_LIST
+                        .filter(trans => transitionCategory === 'all' || trans.category === transitionCategory)
+                        .filter(trans => !transitionSearch || trans.name.toLowerCase().includes(transitionSearch.toLowerCase()) || trans.desc.toLowerCase().includes(transitionSearch.toLowerCase()))
+                        .map(trans => {
+                          const isHovered = hoveredTransitionId === trans.id;
+                          return (
+                            <div
+                              key={trans.id}
+                              onClick={() => handleApplyTransition(trans)}
+                              onMouseEnter={() => setHoveredTransitionId(trans.id)}
+                              onMouseLeave={() => setHoveredTransitionId(null)}
+                              title={`${trans.name} (${trans.desc}) - Klik untuk pasang transisi`}
+                              style={{
+                                backgroundColor: '#18181b',
+                                borderRadius: '8px',
+                                border: isHovered ? '1.5px solid #00d8b6' : '1px solid #27272a',
+                                overflow: 'hidden',
+                                cursor: 'pointer',
+                                position: 'relative',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                transition: 'all 0.15s',
+                                boxShadow: isHovered ? '0 4px 12px rgba(0, 216, 182, 0.15)' : 'none'
+                              }}
+                            >
+                              <div style={{ height: '72px', width: '100%', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: trans.gradient }}>
+                                <TransitionPreviewIcon type={trans.id} isHovered={isHovered} />
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleApplyTransition(trans);
+                                  }}
+                                  title="Pasang transisi ke klip terpilih"
+                                  style={{
+                                    position: 'absolute',
+                                    right: '6px',
+                                    bottom: '6px',
+                                    width: '24px',
+                                    height: '24px',
+                                    borderRadius: '50%',
+                                    backgroundColor: isHovered ? '#00d8b6' : 'rgba(24, 24, 27, 0.85)',
+                                    border: 'none',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    color: isHovered ? '#09090b' : '#ffffff',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.15s',
+                                    boxShadow: '0 2px 5px rgba(0,0,0,0.5)'
+                                  }}
+                                >
+                                  <Plus size={13} strokeWidth={2.5} />
+                                </button>
+                              </div>
+                              
+                              <div style={{ padding: '6px 8px', display: 'flex', flexDirection: 'column', gap: '2px', backgroundColor: '#18181b' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                  <span style={{ fontSize: '11px', fontWeight: 600, color: '#f4f4f5', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{trans.name}</span>
+                                </div>
+                                <span style={{ fontSize: '9px', color: '#71717a', lineHeight: 1.2, display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{trans.desc}</span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                    </div>
+
+                    {/* Apply to All Button */}
+                    <button
+                      onClick={() => {
+                        const defaultTrans = STUDIO_TRANSITIONS_LIST.find(t => t.id === 'cross_dissolve') || STUDIO_TRANSITIONS_LIST[0];
+                        handleApplyTransitionToAll(defaultTrans);
+                      }}
+                      title="Terapkan transisi Cross Dissolve ke seluruh sambungan klip di timeline"
+                      style={{
+                        marginTop: '4px',
+                        padding: '8px',
+                        borderRadius: '6px',
+                        backgroundColor: '#27272a',
+                        border: '1px solid #3f3f46',
+                        color: '#e4e4e7',
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px',
+                        transition: 'all 0.15s'
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.backgroundColor = '#00d8b6'; e.currentTarget.style.color = '#09090b'; }}
+                      onMouseLeave={e => { e.currentTarget.style.backgroundColor = '#27272a'; e.currentTarget.style.color = '#e4e4e7'; }}
+                    >
+                      <Split size={13} />
+                      <span>Terapkan ke Semua Sambungan Klip</span>
+                    </button>
+
+                  </div>
                 </div>
               )}
 
@@ -10120,6 +10920,9 @@ STRICT ALIGNMENT RULES:
                 useLyricsVersion={useLyricsVersion}
                 coverPhotoUrl={coverPhotoUrl}
                 setCoverPhotoUrl={setCoverPhotoUrl}
+                selectedTransitionItem={selectedTransitionItem}
+                setSelectedTransitionItem={setSelectedTransitionItem}
+                setEditorTab={setEditorTab}
               />
             </div>
 
