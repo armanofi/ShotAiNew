@@ -4741,6 +4741,7 @@ function KaraokePreview({
         if (!el || el.tagName !== 'VIDEO') return;
         
         const isActive = currentTime >= item.start && currentTime <= item.end;
+        const t = item.transform || {};
 
         let nextTransItem = (track?.items || []).find(other => other.id !== item.id && Math.abs(other.start - item.end) < 0.25 && other.transition);
         if (!nextTransItem && tracks) {
