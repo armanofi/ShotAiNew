@@ -6441,6 +6441,25 @@ export default function VideoKaraoke({ onBack }) {
     }
   };
 
+  // Update duration of an already-applied transition on a specific item
+  const handleUpdateTransitionDuration = (itemId, newDuration) => {
+    const dur = Math.max(0.1, Math.min(5.0, parseFloat(newDuration) || 1.0));
+    setTracks(prevTracks =>
+      prevTracks.map(t => ({
+        ...t,
+        items: (t.items || []).map(it => {
+          if (it.id === itemId && it.transition) {
+            const updated = { ...it, transition: { ...it.transition, duration: dur } };
+            // Keep selectedTransitionItem in sync
+            setSelectedTransitionItem(prev => prev?.id === itemId ? updated : prev);
+            return updated;
+          }
+          return it;
+        })
+      }))
+    );
+  };
+
   const [stems, setStems] = useState([
     { id: 'original',    label: 'Original',    color: '#60a5fa', volume: 100, muted: false },
     { id: 'instrumental',label: 'Instrumental', color: '#4ade80', volume: 80,  muted: false },
@@ -9196,47 +9215,155 @@ STRICT ALIGNMENT RULES:
                   {/* Right Column - Grid Kartu Transisi & Kontrol */}
                   <div style={{ width: '64%', padding: '10px', backgroundColor: '#111113', display: 'flex', flexDirection: 'column', gap: '8px', overflowY: 'auto', scrollbarColor: '#3f3f46 #111113', scrollbarWidth: 'thin' }}>
                     
-                    {/* Selected Clip & Transition Info Banner */}
-                    {selectedTransitionItem && (
-                      <div style={{ padding: '8px 10px', borderRadius: '6px', backgroundColor: 'rgba(0, 216, 182, 0.08)', border: '1px solid rgba(0, 216, 182, 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', overflow: 'hidden' }}>
-                          <span style={{ fontSize: '10px', fontWeight: 700, color: '#00d8b6', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                            Klip Terpilih:
-                          </span>
-                          <span style={{ fontSize: '11px', fontWeight: 600, color: '#f4f4f5', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
-                            {selectedTransitionItem.name || 'Visual Media'}
-                            {selectedTransitionItem.transition && (
-                              <span style={{ color: '#38bdf8', marginLeft: '6px', fontWeight: 500 }}>
-                                ({selectedTransitionItem.transition.name || selectedTransitionItem.transition.id} • {selectedTransitionItem.transition.duration}s)
-                              </span>
-                            )}
-                          </span>
-                        </div>
-                        {selectedTransitionItem.transition && (
+                    {/* ── Transition Properties Panel (shows when badge clicked or transition selected) ── */}
+                    {selectedTransitionItem && selectedTransitionItem.transition ? (
+                      <div style={{
+                        borderRadius: '8px',
+                        backgroundColor: '#0f172a',
+                        border: '1.5px solid rgba(0, 216, 182, 0.45)',
+                        overflow: 'hidden',
+                        boxShadow: '0 4px 20px rgba(0, 216, 182, 0.12)'
+                      }}>
+                        {/* Header */}
+                        <div style={{ padding: '8px 12px', background: 'linear-gradient(90deg, rgba(0,216,182,0.18) 0%, rgba(0,216,182,0.05) 100%)', borderBottom: '1px solid rgba(0,216,182,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+                            <ArrowLeftRight size={13} color="#00d8b6" strokeWidth={2.5} />
+                            <span style={{ fontSize: '11px', fontWeight: 700, color: '#00d8b6', letterSpacing: '0.04em', textTransform: 'uppercase' }}>Transisi Aktif</span>
+                          </div>
+                          {/* Delete button */}
                           <button
                             onClick={() => handleRemoveTransition(selectedTransitionItem.id)}
-                            title="Hapus transisi dari klip ini"
+                            title="Hapus transisi ini dari timeline"
                             style={{
-                              padding: '4px 8px',
+                              padding: '3px 9px',
                               borderRadius: '4px',
-                              backgroundColor: 'rgba(239, 68, 68, 0.15)',
-                              border: '1px solid rgba(239, 68, 68, 0.3)',
+                              backgroundColor: 'rgba(239,68,68,0.15)',
+                              border: '1px solid rgba(239,68,68,0.4)',
                               color: '#ef4444',
                               fontSize: '10px',
-                              fontWeight: 600,
+                              fontWeight: 700,
                               cursor: 'pointer',
                               display: 'flex',
                               alignItems: 'center',
                               gap: '4px',
-                              flexShrink: 0
+                              transition: 'all 0.15s'
                             }}
+                            onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'rgba(239,68,68,0.3)'; }}
+                            onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'rgba(239,68,68,0.15)'; }}
                           >
                             <Trash2 size={11} />
                             Hapus
                           </button>
-                        )}
+                        </div>
+
+                        {/* Transition name + preview icon */}
+                        <div style={{ padding: '10px 12px', display: 'flex', alignItems: 'center', gap: '10px', borderBottom: '1px solid #1e293b' }}>
+                          {/* Mini preview icon */}
+                          <div style={{ width: '44px', height: '36px', borderRadius: '5px', overflow: 'hidden', flexShrink: 0, background: (() => { const t = STUDIO_TRANSITIONS_LIST.find(t => t.id === selectedTransitionItem.transition.id); return t?.gradient || 'linear-gradient(135deg,#1e293b,#0f172a)'; })(), display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #27272a' }}>
+                            <TransitionPreviewIcon type={selectedTransitionItem.transition.id} isHovered={false} />
+                          </div>
+                          <div style={{ flex: 1, overflow: 'hidden' }}>
+                            <div style={{ fontSize: '12px', fontWeight: 700, color: '#f4f4f5', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {selectedTransitionItem.transition.name || selectedTransitionItem.transition.id}
+                            </div>
+                            <div style={{ fontSize: '10px', color: '#64748b', marginTop: '2px' }}>
+                              {(() => { const t = STUDIO_TRANSITIONS_LIST.find(t => t.id === selectedTransitionItem.transition.id); return t?.desc || selectedTransitionItem.transition.category || ''; })()}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Duration control */}
+                        <div style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <span style={{ fontSize: '10px', fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Durasi</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <input
+                                type="number"
+                                min="0.1"
+                                max="5.0"
+                                step="0.1"
+                                value={selectedTransitionItem.transition.duration || 1.0}
+                                onChange={e => handleUpdateTransitionDuration(selectedTransitionItem.id, e.target.value)}
+                                style={{
+                                  width: '46px',
+                                  backgroundColor: '#18181b',
+                                  border: '1px solid #3f3f46',
+                                  borderRadius: '4px',
+                                  color: '#00d8b6',
+                                  fontSize: '12px',
+                                  fontWeight: 700,
+                                  textAlign: 'center',
+                                  padding: '2px 4px',
+                                  outline: 'none',
+                                  fontFamily: 'inherit'
+                                }}
+                              />
+                              <span style={{ fontSize: '10px', color: '#64748b' }}>detik</span>
+                            </div>
+                          </div>
+                          {/* Slider */}
+                          <input
+                            type="range"
+                            min="0.1"
+                            max="5.0"
+                            step="0.1"
+                            value={selectedTransitionItem.transition.duration || 1.0}
+                            onChange={e => handleUpdateTransitionDuration(selectedTransitionItem.id, e.target.value)}
+                            style={{
+                              width: '100%',
+                              accentColor: '#00d8b6',
+                              cursor: 'pointer',
+                              height: '4px'
+                            }}
+                          />
+                          {/* Quick preset buttons */}
+                          <div style={{ display: 'flex', gap: '4px' }}>
+                            {[0.5, 0.8, 1.0, 1.5, 2.0, 3.0].map(dur => {
+                              const isActive = Math.abs((selectedTransitionItem.transition.duration || 1.0) - dur) < 0.05;
+                              return (
+                                <button
+                                  key={dur}
+                                  onClick={() => handleUpdateTransitionDuration(selectedTransitionItem.id, dur)}
+                                  style={{
+                                    flex: 1,
+                                    padding: '3px 0',
+                                    fontSize: '9px',
+                                    fontWeight: isActive ? 700 : 500,
+                                    borderRadius: '4px',
+                                    border: isActive ? '1px solid #00d8b6' : '1px solid #27272a',
+                                    backgroundColor: isActive ? 'rgba(0,216,182,0.15)' : '#18181b',
+                                    color: isActive ? '#00d8b6' : '#71717a',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.12s'
+                                  }}
+                                >
+                                  {dur}s
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        {/* Clip name info */}
+                        <div style={{ padding: '6px 12px 8px', display: 'flex', alignItems: 'center', gap: '6px', borderTop: '1px solid #1e293b' }}>
+                          <span style={{ fontSize: '9px', color: '#475569' }}>Diterapkan pada:</span>
+                          <span style={{ fontSize: '9px', fontWeight: 600, color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {selectedTransitionItem.name || 'Klip Visual'}
+                          </span>
+                        </div>
                       </div>
-                    )}
+                    ) : selectedTransitionItem && !selectedTransitionItem.transition ? (
+                      /* Clip selected but no transition yet — prompt to pick one */
+                      <div style={{ padding: '8px 10px', borderRadius: '6px', backgroundColor: 'rgba(0,216,182,0.06)', border: '1px dashed rgba(0,216,182,0.3)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <ArrowLeftRight size={13} color="#00d8b6" />
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                          <span style={{ fontSize: '10px', fontWeight: 700, color: '#00d8b6' }}>Pilih Transisi</span>
+                          <span style={{ fontSize: '10px', color: '#64748b' }}>
+                            {selectedTransitionItem.name || 'Klip terpilih'} — klik kartu transisi di bawah untuk memasang
+                          </span>
+                        </div>
+                      </div>
+                    ) : null}
 
                     {/* Search Input */}
                     <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
