@@ -3478,10 +3478,21 @@ function TimelineTrack({ tracks, setTracks, lines, setLines, duration, currentTi
                       }
                     })()}
 
-                    {/* Visual Transition Badge at the Cut Junction between clips */}
-                    {(track.type === 'video' || track.type === 'image') && !track.locked && (
-                      <>
-                        {item.transition ? (
+                    {/* Visual Transition Badge — only at real cut junctions (prev clip ends adjacent to this clip start) */}
+                    {(track.type === 'video' || track.type === 'image') && !track.locked && itemIdx > 0 && (() => {
+                      // Sorted items in this track by start time for adjacency check
+                      const sortedTrackItems = [...track.items].sort((a, b) => a.start - b.start);
+                      const sortedIdx = sortedTrackItems.findIndex(i => i.id === item.id);
+                      const prevSortedItem = sortedIdx > 0 ? sortedTrackItems[sortedIdx - 1] : null;
+                      const isAdjacentToPrev = prevSortedItem && Math.abs(item.start - prevSortedItem.end) < 0.25;
+
+                      if (!isAdjacentToPrev) return null; // No badge if not at a real cut junction
+
+                      const isSelectedTrans = selectedTransitionItem?.id === item.id;
+
+                      if (item.transition) {
+                        // Active transition badge (teal, solid)
+                        return (
                           <div
                             onClick={(e) => {
                               e.stopPropagation();
@@ -3490,7 +3501,7 @@ function TimelineTrack({ tracks, setTracks, lines, setLines, duration, currentTi
                               if (setSelectedTrackItemId) setSelectedTrackItemId(item.id);
                               if (setEditorTab) setEditorTab('transitions');
                             }}
-                            title={`Transisi: ${item.transition.name || item.transition.id} (${item.transition.duration || 1}s) - Klik untuk mengedit`}
+                            title={`Transisi: ${item.transition.name || item.transition.id} (${item.transition.duration || 1}s) — Klik untuk mengedit`}
                             style={{
                               position: 'absolute',
                               left: '-11px',
@@ -3499,67 +3510,68 @@ function TimelineTrack({ tracks, setTracks, lines, setLines, duration, currentTi
                               width: '22px',
                               height: '22px',
                               borderRadius: '5px',
-                              backgroundColor: selectedTransitionItem?.id === item.id ? '#00d8b6' : '#18181b',
-                              border: selectedTransitionItem?.id === item.id ? '2px solid #ffffff' : '1.5px solid #00d8b6',
+                              backgroundColor: isSelectedTrans ? '#00d8b6' : '#18181b',
+                              border: isSelectedTrans ? '2px solid #ffffff' : '1.5px solid #00d8b6',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
                               zIndex: 70,
                               cursor: 'pointer',
-                              boxShadow: selectedTransitionItem?.id === item.id ? '0 0 10px rgba(0, 216, 182, 0.9)' : '0 2px 6px rgba(0,0,0,0.8)',
+                              boxShadow: isSelectedTrans ? '0 0 10px rgba(0,216,182,0.9)' : '0 2px 6px rgba(0,0,0,0.8)',
                               transition: 'all 0.15s ease'
                             }}
                           >
-                            <ArrowLeftRight size={12} color={selectedTransitionItem?.id === item.id ? '#09090b' : '#00d8b6'} strokeWidth={2.5} />
+                            <ArrowLeftRight size={12} color={isSelectedTrans ? '#09090b' : '#00d8b6'} strokeWidth={2.5} />
                           </div>
-                        ) : (
-                          itemIdx > 0 && Math.abs(item.start - track.items[itemIdx - 1]?.end) < 0.25 && (
-                            <div
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                e.preventDefault();
-                                if (setSelectedTransitionItem) setSelectedTransitionItem(item);
-                                if (setSelectedTrackItemId) setSelectedTrackItemId(item.id);
-                                if (setEditorTab) setEditorTab('transitions');
-                              }}
-                              title="Klik untuk menambahkan transisi pada sambungan ini"
-                              style={{
-                                position: 'absolute',
-                                left: '-9px',
-                                top: '50%',
-                                transform: 'translateY(-50%)',
-                                width: '18px',
-                                height: '18px',
-                                borderRadius: '4px',
-                                backgroundColor: 'rgba(24, 24, 27, 0.85)',
-                                border: '1px dashed rgba(255, 255, 255, 0.4)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                zIndex: 50,
-                                cursor: 'pointer',
-                                opacity: 0.65,
-                                transition: 'all 0.15s ease'
-                              }}
-                              onMouseEnter={e => {
-                                e.currentTarget.style.opacity = '1';
-                                e.currentTarget.style.borderColor = '#00d8b6';
-                                e.currentTarget.style.backgroundColor = '#18181b';
-                                e.currentTarget.style.transform = 'translateY(-50%) scale(1.15)';
-                              }}
-                              onMouseLeave={e => {
-                                e.currentTarget.style.opacity = '0.65';
-                                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.4)';
-                                e.currentTarget.style.backgroundColor = 'rgba(24, 24, 27, 0.85)';
-                                e.currentTarget.style.transform = 'translateY(-50%) scale(1)';
-                              }}
-                            >
-                              <ArrowLeftRight size={10} color="#a1a1aa" strokeWidth={2} />
-                            </div>
-                          )
-                        )}
-                      </>
-                    )}
+                        );
+                      } else {
+                        // Empty junction connector (dashed, invites user to add transition)
+                        return (
+                          <div
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              e.preventDefault();
+                              if (setSelectedTransitionItem) setSelectedTransitionItem(item);
+                              if (setSelectedTrackItemId) setSelectedTrackItemId(item.id);
+                              if (setEditorTab) setEditorTab('transitions');
+                            }}
+                            title="Klik untuk menambahkan transisi pada sambungan ini"
+                            style={{
+                              position: 'absolute',
+                              left: '-9px',
+                              top: '50%',
+                              transform: 'translateY(-50%)',
+                              width: '18px',
+                              height: '18px',
+                              borderRadius: '4px',
+                              backgroundColor: 'rgba(24,24,27,0.85)',
+                              border: '1px dashed rgba(255,255,255,0.4)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              zIndex: 50,
+                              cursor: 'pointer',
+                              opacity: 0.65,
+                              transition: 'all 0.15s ease'
+                            }}
+                            onMouseEnter={e => {
+                              e.currentTarget.style.opacity = '1';
+                              e.currentTarget.style.borderColor = '#00d8b6';
+                              e.currentTarget.style.backgroundColor = '#18181b';
+                              e.currentTarget.style.transform = 'translateY(-50%) scale(1.15)';
+                            }}
+                            onMouseLeave={e => {
+                              e.currentTarget.style.opacity = '0.65';
+                              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.4)';
+                              e.currentTarget.style.backgroundColor = 'rgba(24,24,27,0.85)';
+                              e.currentTarget.style.transform = 'translateY(-50%) scale(1)';
+                            }}
+                          >
+                            <ArrowLeftRight size={10} color="#a1a1aa" strokeWidth={2} />
+                          </div>
+                        );
+                      }
+                    })()}
                   </div>
                 );
               })}
@@ -6319,27 +6331,40 @@ export default function VideoKaraoke({ onBack }) {
     setSelectedTrackItemId(itemId);
   };
 
-  // ── Transition Handlers (Applies to Video-to-Video, Image-to-Image, Video-to-Image, Image-to-Video) ──
+  // ── Transition Handlers (only valid between adjacent clips: Video↔Video, Image↔Image, Video↔Image) ──
   const handleApplyTransition = (transPreset, targetItemId = null) => {
     setTracks(prevTracks => {
       let candidateItemId = targetItemId || selectedTransitionItem?.id || selectedTrackItemId;
-      
-      // If no valid visual item selected, find closest visual clip to currentTime
+
+      // Gather all visual items sorted by start time (within same-track context)
+      const allVisualTracks = prevTracks.filter(t => !t.isEffectTrack && t.type !== 'effect' && (t.type === 'video' || t.type === 'image'));
+      const allVisualItemsSorted = allVisualTracks.flatMap(t => (t.items || []).map(it => ({ ...it, _trackId: t.id }))).sort((a, b) => a.start - b.start);
+
+      // If no item selected, try to find best candidate (one that has an adjacent previous clip)
       if (!candidateItemId) {
-        const visualItems = prevTracks
-          .filter(t => !t.isEffectTrack && t.type !== 'effect' && (t.type === 'video' || t.type === 'image'))
-          .flatMap(t => t.items || [])
-          .sort((a, b) => a.start - b.start);
-        
-        // Find item that starts near currentTime or right after
-        const itemAtOrAfter = visualItems.find(it => Math.abs(it.start - currentTime) <= 0.5) ||
-                              visualItems.find(it => it.start >= currentTime) ||
-                              visualItems[visualItems.length - 1];
-        if (itemAtOrAfter) candidateItemId = itemAtOrAfter.id;
+        // Find item near currentTime that has an adjacent predecessor
+        const candidate = allVisualItemsSorted.find(it => {
+          const idx = allVisualItemsSorted.indexOf(it);
+          const prev = idx > 0 ? allVisualItemsSorted[idx - 1] : null;
+          const hasPrev = prev && Math.abs(it.start - prev.end) < 0.25;
+          return hasPrev && Math.abs(it.start - currentTime) <= 2;
+        });
+        if (candidate) candidateItemId = candidate.id;
       }
 
       if (!candidateItemId) {
-        alert('Silakan pilih klip video atau gambar di timeline terlebih dahulu untuk memasang transisi.');
+        alert('Tambahkan dua video/gambar yang bersambungan ke timeline terlebih dahulu, lalu pilih klip kedua (yang akan menerima transisi dari klip sebelumnya).');
+        return prevTracks;
+      }
+
+      // Verify the candidate item has an adjacent PREVIOUS clip (transition only valid at junctions)
+      const candidateIdx = allVisualItemsSorted.findIndex(it => it.id === candidateItemId);
+      const prevItem = candidateIdx > 0 ? allVisualItemsSorted[candidateIdx - 1] : null;
+      const candidateItem = allVisualItemsSorted[candidateIdx];
+      const hasAdjacentPrev = prevItem && candidateItem && Math.abs(candidateItem.start - prevItem.end) < 0.25;
+
+      if (!hasAdjacentPrev) {
+        alert('Transisi hanya bisa dipasang di titik sambungan antara dua klip yang berdekatan (ujung klip 1 → awal klip 2). Pastikan ada klip lain yang bersambung sebelum klip ini.');
         return prevTracks;
       }
 
