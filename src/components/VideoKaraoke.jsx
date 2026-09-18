@@ -2498,12 +2498,27 @@ function TimelineTrack({ tracks, setTracks, lines, setLines, duration, currentTi
                         setInitialStart(line.start); 
                         setInitialEnd(line.end); 
                         if (stopMediaBinPreview) stopMediaBinPreview(); 
+
+                        if (onSeek && rulerRef.current) {
+                          const rRect = rulerRef.current.getBoundingClientRect();
+                          const rawX = e.clientX - rRect.left - TIMELINE_START_OFFSET;
+                          const targetTime = Math.max(line.start, Math.min(line.end, (rawX / totalPx) * safeDuration));
+                          if (currentTime < line.start || currentTime > line.end) {
+                            onSeek(Number(targetTime.toFixed(3)));
+                          }
+                        }
                       }}
-                      onClick={() => { 
+                      onClick={e => { 
                         if (dragMovedRef.current) return; 
                         setSelectedLineIdx(i); 
                         setSelectedTrackItemId(null); 
                         if (stopMediaBinPreview) stopMediaBinPreview(); 
+                        if (onSeek && rulerRef.current) {
+                          const rRect = rulerRef.current.getBoundingClientRect();
+                          const rawX = e.clientX - rRect.left - TIMELINE_START_OFFSET;
+                          const targetTime = Math.max(line.start, Math.min(line.end, (rawX / totalPx) * safeDuration));
+                          onSeek(Number(targetTime.toFixed(3)));
+                        }
                       }}
                       onContextMenu={e => {
                         e.preventDefault();
@@ -2997,6 +3012,7 @@ function TimelineTrack({ tracks, setTracks, lines, setLines, duration, currentTi
                       e.preventDefault(); 
                       e.stopPropagation(); 
                       if (setIsPlaying) setIsPlaying(false);
+                      dragMovedRef.current = false;
                       setDraggingItem({ 
                         type: 'trackItem', 
                         trackId: track.id, 
@@ -3012,6 +3028,27 @@ function TimelineTrack({ tracks, setTracks, lines, setLines, duration, currentTi
                       setSelectedTrackItemId(item.id); 
                       setSelectedLineIdx(null); 
                       if (stopMediaBinPreview) stopMediaBinPreview(); 
+
+                      if (onSeek && rulerRef.current) {
+                        const rRect = rulerRef.current.getBoundingClientRect();
+                        const rawX = e.clientX - rRect.left - TIMELINE_START_OFFSET;
+                        const targetTime = Math.max(item.start, Math.min(item.end, (rawX / totalPx) * safeDuration));
+                        if (currentTime < item.start || currentTime > item.end) {
+                          onSeek(Number(targetTime.toFixed(3)));
+                        }
+                      }
+                    }}
+                    onClick={e => {
+                      if (dragMovedRef.current) return;
+                      setSelectedTrackItemId(item.id);
+                      setSelectedLineIdx(null);
+                      if (stopMediaBinPreview) stopMediaBinPreview();
+                      if (onSeek && rulerRef.current) {
+                        const rRect = rulerRef.current.getBoundingClientRect();
+                        const rawX = e.clientX - rRect.left - TIMELINE_START_OFFSET;
+                        const targetTime = Math.max(item.start, Math.min(item.end, (rawX / totalPx) * safeDuration));
+                        onSeek(Number(targetTime.toFixed(3)));
+                      }
                     }}
                     onContextMenu={e => {
                       e.preventDefault();
@@ -6285,13 +6322,14 @@ export default function VideoKaraoke({ onBack }) {
   }, [tracks, lines, markers, history.length]);
 
   // ── Universal Split ][ (Ctrl+B) ──
+  // Hanya aktif jika klip (mp3/audio, video, gambar, teks) dipilih di timeline & playhead berada di dalam klip
   const canSplitUniversal = Boolean(
     (selectedTrackItem && currentTime > selectedTrackItem.start + 0.05 && currentTime < selectedTrackItem.end - 0.05) ||
-    (selectedLineIdx !== null && lines[selectedLineIdx] && currentTime > lines[selectedLineIdx].start + 0.05 && currentTime < lines[selectedLineIdx].end - 0.05) ||
-    (!selectedTrackItemId && selectedLineIdx === null && tracks.some(t => (t.items || []).some(it => currentTime > it.start + 0.05 && currentTime < it.end - 0.05)))
+    (selectedLineIdx !== null && lines[selectedLineIdx] && currentTime > lines[selectedLineIdx].start + 0.05 && currentTime < lines[selectedLineIdx].end - 0.05)
   );
 
   const handleSplitUniversal = useCallback(() => {
+    if (!canSplitUniversal) return;
     pushHistory(tracks, lines, markers);
 
     if (selectedTrackItemId) {
@@ -6326,39 +6364,18 @@ export default function VideoKaraoke({ onBack }) {
         updated.splice(selectedLineIdx, 1, l1, l2);
         return updated;
       });
-    } else {
-      // Split all items intersecting currentTime
-      setTracks(prev => prev.map(t => {
-        const newItems = [];
-        t.items.forEach(item => {
-          if (currentTime > item.start + 0.05 && currentTime < item.end - 0.05) {
-            const splitTime = Number(currentTime.toFixed(3));
-            const splitOffset = splitTime - item.start;
-            newItems.push({ ...item, end: splitTime });
-            newItems.push({
-              ...item,
-              id: `${item.id}-split-${Date.now()}`,
-              start: splitTime,
-              end: item.end,
-              sourceStart: Number(((item.sourceStart || 0) + splitOffset).toFixed(3))
-            });
-          } else {
-            newItems.push(item);
-          }
-        });
-        return { ...t, items: newItems };
-      }));
     }
-  }, [selectedTrackItemId, selectedLineIdx, currentTime, tracks, lines, markers, pushHistory]);
+  }, [canSplitUniversal, selectedTrackItemId, selectedLineIdx, currentTime, tracks, lines, markers, pushHistory]);
 
   // ── Universal Delete Left [ (Ctrl+Q) ──
+  // Hanya aktif jika klip dipilih di timeline & playhead berada di dalam klip
   const canDeleteLeft = Boolean(
-    (selectedTrackItem && currentTime > selectedTrackItem.start && currentTime < selectedTrackItem.end) ||
-    (selectedLineIdx !== null && lines[selectedLineIdx] && currentTime > lines[selectedLineIdx].start && currentTime < lines[selectedLineIdx].end) ||
-    (!selectedTrackItemId && selectedLineIdx === null && tracks.some(t => (t.items || []).some(it => currentTime > it.start && currentTime < it.end)))
+    (selectedTrackItem && currentTime > selectedTrackItem.start + 0.05 && currentTime < selectedTrackItem.end) ||
+    (selectedLineIdx !== null && lines[selectedLineIdx] && currentTime > lines[selectedLineIdx].start + 0.05 && currentTime < lines[selectedLineIdx].end)
   );
 
   const handleDeleteLeft = useCallback(() => {
+    if (!canDeleteLeft) return;
     pushHistory(tracks, lines, markers);
 
     if (selectedTrackItemId) {
@@ -6366,7 +6383,7 @@ export default function VideoKaraoke({ onBack }) {
         ...t,
         items: t.items.map(it => {
           if (it.id !== selectedTrackItemId) return it;
-          if (currentTime > it.start && currentTime < it.end) {
+          if (currentTime > it.start + 0.05 && currentTime < it.end) {
             const cutDur = currentTime - it.start;
             return {
               ...it,
@@ -6380,37 +6397,23 @@ export default function VideoKaraoke({ onBack }) {
     } else if (selectedLineIdx !== null && lines[selectedLineIdx]) {
       setLines(prev => prev.map((l, idx) => {
         if (idx !== selectedLineIdx) return l;
-        if (currentTime > l.start && currentTime < l.end) {
+        if (currentTime > l.start + 0.05 && currentTime < l.end) {
           return { ...l, start: Number(currentTime.toFixed(3)) };
         }
         return l;
       }));
-    } else {
-      setTracks(prev => prev.map(t => ({
-        ...t,
-        items: t.items.map(it => {
-          if (currentTime > it.start && currentTime < it.end) {
-            const cutDur = currentTime - it.start;
-            return {
-              ...it,
-              start: Number(currentTime.toFixed(3)),
-              sourceStart: Number(((it.sourceStart || 0) + cutDur).toFixed(3))
-            };
-          }
-          return it;
-        })
-      })));
     }
-  }, [selectedTrackItemId, selectedLineIdx, currentTime, tracks, lines, markers, pushHistory]);
+  }, [canDeleteLeft, selectedTrackItemId, selectedLineIdx, currentTime, tracks, lines, markers, pushHistory]);
 
   // ── Universal Delete Right ] (Ctrl+W) ──
+  // Hanya aktif jika klip dipilih di timeline & playhead berada di dalam klip
   const canDeleteRight = Boolean(
-    (selectedTrackItem && currentTime > selectedTrackItem.start && currentTime < selectedTrackItem.end) ||
-    (selectedLineIdx !== null && lines[selectedLineIdx] && currentTime > lines[selectedLineIdx].start && currentTime < lines[selectedLineIdx].end) ||
-    (!selectedTrackItemId && selectedLineIdx === null && tracks.some(t => (t.items || []).some(it => currentTime > it.start && currentTime < it.end)))
+    (selectedTrackItem && currentTime > selectedTrackItem.start && currentTime < selectedTrackItem.end - 0.05) ||
+    (selectedLineIdx !== null && lines[selectedLineIdx] && currentTime > lines[selectedLineIdx].start && currentTime < lines[selectedLineIdx].end - 0.05)
   );
 
   const handleDeleteRight = useCallback(() => {
+    if (!canDeleteRight) return;
     pushHistory(tracks, lines, markers);
 
     if (selectedTrackItemId) {
@@ -6418,7 +6421,7 @@ export default function VideoKaraoke({ onBack }) {
         ...t,
         items: t.items.map(it => {
           if (it.id !== selectedTrackItemId) return it;
-          if (currentTime > it.start && currentTime < it.end) {
+          if (currentTime > it.start && currentTime < it.end - 0.05) {
             return {
               ...it,
               end: Number(currentTime.toFixed(3))
@@ -6430,26 +6433,13 @@ export default function VideoKaraoke({ onBack }) {
     } else if (selectedLineIdx !== null && lines[selectedLineIdx]) {
       setLines(prev => prev.map((l, idx) => {
         if (idx !== selectedLineIdx) return l;
-        if (currentTime > l.start && currentTime < l.end) {
+        if (currentTime > l.start && currentTime < l.end - 0.05) {
           return { ...l, end: Number(currentTime.toFixed(3)) };
         }
         return l;
       }));
-    } else {
-      setTracks(prev => prev.map(t => ({
-        ...t,
-        items: t.items.map(it => {
-          if (currentTime > it.start && currentTime < it.end) {
-            return {
-              ...it,
-              end: Number(currentTime.toFixed(3))
-            };
-          }
-          return it;
-        })
-      })));
     }
-  }, [selectedTrackItemId, selectedLineIdx, currentTime, tracks, lines, markers, pushHistory]);
+  }, [canDeleteRight, selectedTrackItemId, selectedLineIdx, currentTime, tracks, lines, markers, pushHistory]);
 
   // ── Add Marker (M) ──
   const handleAddMarker = useCallback(() => {
@@ -9735,7 +9725,7 @@ STRICT ALIGNMENT RULES:
               <button
                 onClick={handleSplitUniversal}
                 disabled={!canSplitUniversal}
-                title="Split di posisi jarum playhead (Ctrl+B)"
+                title={canSplitUniversal ? "Split klip terpilih di posisi playhead (Ctrl+B)" : "Klik klip (mp3, video, gambar, teks) & posisikan playhead untuk Split"}
                 className={`flex items-center justify-center w-7 h-7 rounded transition-all ${
                   canSplitUniversal
                     ? 'bg-[#18181b] text-zinc-100 hover:bg-[#27272a] hover:text-white border border-[#27272a] cursor-pointer shadow-sm'
@@ -9749,7 +9739,7 @@ STRICT ALIGNMENT RULES:
               <button
                 onClick={handleDeleteLeft}
                 disabled={!canDeleteLeft}
-                title="Hapus bagian kiri klip di posisi playhead [ (Ctrl+Q)"
+                title={canDeleteLeft ? "Hapus bagian kiri klip terpilih di posisi playhead [ (Ctrl+Q)" : "Klik klip & posisikan playhead untuk Hapus Bagian Kiri"}
                 className={`flex items-center justify-center w-7 h-7 rounded transition-all ${
                   canDeleteLeft
                     ? 'bg-[#18181b] text-zinc-100 hover:bg-[#27272a] hover:text-white border border-[#27272a] cursor-pointer shadow-sm'
@@ -9763,7 +9753,7 @@ STRICT ALIGNMENT RULES:
               <button
                 onClick={handleDeleteRight}
                 disabled={!canDeleteRight}
-                title="Hapus bagian kanan klip di posisi playhead ] (Ctrl+W)"
+                title={canDeleteRight ? "Hapus bagian kanan klip terpilih di posisi playhead ] (Ctrl+W)" : "Klik klip & posisikan playhead untuk Hapus Bagian Kanan"}
                 className={`flex items-center justify-center w-7 h-7 rounded transition-all ${
                   canDeleteRight
                     ? 'bg-[#18181b] text-zinc-100 hover:bg-[#27272a] hover:text-white border border-[#27272a] cursor-pointer shadow-sm'
