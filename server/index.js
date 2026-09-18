@@ -101,13 +101,13 @@ const requireSuperadmin = (req, res, next) => {
 app.get('/', (req, res) => {
   const html = `
     <!DOCTYPE html>
-    <html lang="en">
+    <html lang="id" class="scroll-smooth">
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>ShotAI</title>
+        <title>ShotAI - Workspace AI Desktop Terpadu</title>
         <script src="https://cdn.tailwindcss.com"></script>
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
         <style>
             body { font-family: 'Inter', sans-serif; background-color: #09090b; color: #f1f5f9; overflow-x: hidden; }
             .gradient-bg {
@@ -115,114 +115,152 @@ app.get('/', (req, res) => {
                 background: radial-gradient(circle at top right, rgba(99, 102, 241, 0.15) 0%, rgba(9, 9, 11, 0) 70%);
                 z-index: -1; pointer-events: none;
             }
-            .mockup-shadow { box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8); }
+            .mockup-shadow { box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.85); }
+            .glow-card:hover {
+                box-shadow: 0 0 30px rgba(99, 102, 241, 0.2);
+                border-color: rgba(99, 102, 241, 0.5);
+            }
         </style>
     </head>
     <body class="relative min-h-screen flex flex-col bg-[#09090b] text-[#f1f5f9]">
         <div class="gradient-bg"></div>
         
-        <!-- Header -->
-        <header class="w-full max-w-7xl mx-auto px-6 py-6 flex justify-between items-center border-b border-[#27272a]">
-            <div class="flex items-center gap-3">
-                <div class="w-8 h-8 rounded-lg bg-black border border-white/15 flex items-center justify-center shadow-lg shadow-purple-900/30">
-                    <div class="w-4 h-4 rounded-sm" style="background: linear-gradient(135deg, #4f46e5, #ec4899, #eab308);"></div>
-                </div>
-                <span class="font-bold text-lg text-white">ShotAI</span>
+        <!-- Sticky Header & Navigation -->
+        <header class="sticky top-0 z-50 w-full backdrop-blur-md bg-[#09090b]/85 border-b border-[#27272a] transition-all">
+            <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+                <a href="#home" class="flex items-center gap-3 group">
+                    <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-lg shadow-purple-900/40 group-hover:scale-105 transition-transform">
+                        <span class="text-white font-black text-sm">SA</span>
+                    </div>
+                    <span class="font-extrabold text-xl tracking-tight text-white">ShotAI</span>
+                </a>
+
+                <!-- Desktop Nav -->
+                <nav class="hidden md:flex items-center gap-7 text-sm font-medium text-gray-300">
+                    <a href="#home" class="hover:text-white hover:text-indigo-400 transition-colors">Home</a>
+                    <a href="#produk" class="hover:text-white hover:text-indigo-400 transition-colors">Produk</a>
+                    <a href="#keunggulan" class="hover:text-white hover:text-indigo-400 transition-colors">Keunggulan</a>
+                    <a href="#tutorial" class="hover:text-white hover:text-indigo-400 transition-colors">Tutorial</a>
+                    <a href="#toko" class="hover:text-white hover:text-indigo-400 transition-colors">Toko</a>
+                    <a href="/login" class="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white px-5 py-2 rounded-full transition shadow-lg shadow-indigo-600/30 font-semibold text-xs active:scale-95">Masuk</a>
+                </nav>
+
+                <!-- Mobile Menu Button -->
+                <button id="mobileMenuBtn" class="md:hidden p-2 rounded-lg bg-[#18181b] border border-[#27272a] text-gray-300 hover:text-white focus:outline-none">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path id="menuIcon" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                    </svg>
+                </button>
             </div>
-            <nav class="hidden md:flex items-center gap-8 text-sm font-medium text-gray-400">
-                <a href="#" class="hover:text-white transition-colors">Workspace</a>
-                <a href="#" class="hover:text-white transition-colors">Privasi</a>
-                <a href="#" class="hover:text-white transition-colors">Cara Mulai</a>
-                <a href="#" class="hover:text-white transition-colors">FAQ</a>
-                <a href="#" class="hover:text-white transition-colors">Toko</a>
-                <a href="/login" class="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white px-6 py-2 rounded-full transition shadow-md shadow-indigo-600/30 font-semibold">Masuk</a>
-            </nav>
+
+            <!-- Mobile Dropdown Menu -->
+            <div id="mobileMenu" class="hidden md:hidden border-t border-[#27272a] bg-[#111113]/95 px-6 py-4 space-y-3">
+                <a href="#home" class="block text-sm font-medium text-gray-300 hover:text-indigo-400 py-1" onclick="closeMobileMenu()">Home</a>
+                <a href="#produk" class="block text-sm font-medium text-gray-300 hover:text-indigo-400 py-1" onclick="closeMobileMenu()">Produk</a>
+                <a href="#keunggulan" class="block text-sm font-medium text-gray-300 hover:text-indigo-400 py-1" onclick="closeMobileMenu()">Keunggulan</a>
+                <a href="#tutorial" class="block text-sm font-medium text-gray-300 hover:text-indigo-400 py-1" onclick="closeMobileMenu()">Tutorial</a>
+                <a href="#toko" class="block text-sm font-medium text-gray-300 hover:text-indigo-400 py-1" onclick="closeMobileMenu()">Toko</a>
+                <a href="/login" class="block text-center w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs py-2.5 rounded-lg transition" onclick="closeMobileMenu()">Masuk ke Portal</a>
+            </div>
         </header>
 
-        <!-- Hero Section -->
-        <main class="flex-grow w-full max-w-7xl mx-auto px-6 py-16 md:py-24 flex flex-col md:flex-row items-center">
-            
+        <!-- 1. SECTION: HOME (Hero) -->
+        <section id="home" class="scroll-mt-24 w-full max-w-7xl mx-auto px-6 py-16 md:py-24 flex flex-col md:flex-row items-center">
             <!-- Left Text -->
             <div class="w-full md:w-1/2 pr-0 md:pr-12 z-10">
-                <p class="text-indigo-400 text-xs font-bold tracking-widest uppercase mb-4 flex items-center gap-2">
-                  <span class="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span>
-                  Workspace AI • Windows
-                </p>
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-950/80 border border-indigo-800/60 text-indigo-300 text-xs font-semibold mb-6">
+                    <span class="w-2 h-2 rounded-full bg-indigo-400 animate-pulse"></span>
+                    <span>Workspace AI Terpadu • Windows</span>
+                </div>
                 <h1 class="text-5xl md:text-6xl font-extrabold leading-[1.1] tracking-tight mb-6 text-white">
                     Lebih banyak berkarya.<br>
                     <span class="bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent">Lebih sedikit berpindah.</span>
                 </h1>
-                <p class="text-lg text-gray-400 mb-10 leading-relaxed max-w-md">
-                    Atur akun, layanan, dan sesi kerja AI milik Anda dalam satu aplikasi desktop. Setiap profil tetap terpisah, rapi, dan siap dilanjutkan.
+                <p class="text-base md:text-lg text-gray-400 mb-8 leading-relaxed max-w-md">
+                    Atur puluhan akun AI, layanan otomasi, dan sesi kerja Anda dalam satu aplikasi desktop yang aman, terisolasi, dan hemat daya.
                 </p>
                 
-                <div class="flex items-center gap-6">
-                    <a href="#" class="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold py-4 px-8 rounded-xl shadow-lg shadow-indigo-600/30 transition flex items-center gap-2 active:scale-95">
-                        Download untuk Windows
+                <div class="flex flex-wrap items-center gap-4">
+                    <a href="#toko" class="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold py-3.5 px-7 rounded-xl shadow-lg shadow-indigo-600/30 transition flex items-center gap-2 active:scale-95 text-sm">
+                        <span>Dapatkan Lisensi</span>
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path></svg>
                     </a>
-                    <a href="#" class="font-semibold text-gray-300 hover:text-white flex items-center gap-2 transition-colors">
-                        Lihat cara kerjanya <span class="text-xl">→</span>
+                    <a href="#produk" class="bg-[#18181b] hover:bg-[#27272a] text-gray-300 hover:text-white font-semibold py-3.5 px-6 rounded-xl border border-[#27272a] transition flex items-center gap-2 text-sm">
+                        Jelajahi Produk <span class="text-indigo-400">→</span>
                     </a>
                 </div>
-                <p class="text-xs text-gray-500 mt-4">Windows 10/11 • Versi terbaru 1.0.17 • Update otomatis</p>
+                <div class="flex items-center gap-4 text-xs text-gray-500 mt-6">
+                    <span class="flex items-center gap-1.5"><svg class="w-3.5 h-3.5 text-emerald-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> Windows 10/11</span>
+                    <span class="flex items-center gap-1.5"><svg class="w-3.5 h-3.5 text-emerald-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> Multi-Sesi Terisolasi</span>
+                    <span class="flex items-center gap-1.5"><svg class="w-3.5 h-3.5 text-emerald-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg> Lisensi Instan</span>
+                </div>
             </div>
 
             <!-- Right Mockup UI -->
-            <div class="w-full md:w-1/2 mt-16 md:mt-0 relative">
-                <div class="bg-[#18181b] rounded-2xl mockup-shadow overflow-hidden border border-[#27272a] w-full aspect-[4/3] flex flex-col relative transform rotate-1 md:rotate-2 hover:rotate-0 transition duration-500">
+            <div class="w-full md:w-1/2 mt-12 md:mt-0 relative">
+                <div class="bg-[#18181b] rounded-2xl mockup-shadow overflow-hidden border border-[#27272a] w-full aspect-[4/3] flex flex-col relative transform rotate-1 hover:rotate-0 transition duration-500">
                     
-                    <!-- Mac Window Header -->
+                    <!-- App Window Header -->
                     <div class="h-10 bg-[#111113] border-b border-[#27272a] flex items-center px-4 gap-2">
                         <div class="w-3 h-3 rounded-full bg-red-500/80"></div>
                         <div class="w-3 h-3 rounded-full bg-yellow-500/80"></div>
                         <div class="w-3 h-3 rounded-full bg-green-500/80"></div>
-                        <span class="text-xs text-gray-400 font-semibold ml-2 font-mono">ShotAI</span>
+                        <span class="text-xs text-gray-400 font-semibold ml-2 font-mono">ShotAI Desktop Suite</span>
                     </div>
 
                     <!-- App Body -->
-                    <div class="flex flex-1">
+                    <div class="flex flex-1 overflow-hidden">
                         <!-- Sidebar -->
-                        <div class="w-48 bg-[#111113] border-r border-[#27272a] p-4 flex flex-col gap-2">
-                            <div class="w-8 h-8 rounded-lg bg-black border border-white/10 flex items-center justify-center mb-6 shadow">
-                                <div class="w-4 h-4 rounded-sm" style="background: linear-gradient(135deg, #4f46e5, #ec4899, #eab308);"></div>
+                        <div class="w-48 bg-[#111113] border-r border-[#27272a] p-3 flex flex-col gap-1.5">
+                            <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center mb-3 shadow">
+                                <span class="text-[10px] font-black text-white">SA</span>
                             </div>
-                            <div class="px-3 py-2 bg-indigo-600 text-white text-xs font-semibold rounded-lg shadow-sm">Overview</div>
-                            <div class="px-3 py-2 text-gray-400 text-xs font-semibold">Google Flow</div>
-                            <div class="px-3 py-2 text-gray-400 text-xs font-semibold">Dola AI</div>
-                            <div class="px-3 py-2 text-gray-400 text-xs font-semibold">Grok</div>
-                            <div class="px-3 py-2 text-gray-400 text-xs font-semibold">Leonardo</div>
-                            <div class="px-3 py-2 text-gray-400 text-xs font-semibold">ChatGPT</div>
+                            <div class="px-3 py-1.5 bg-indigo-600/30 text-indigo-300 border border-indigo-500/40 text-xs font-semibold rounded-lg">Overview</div>
+                            <div class="px-3 py-1.5 text-gray-400 text-xs font-semibold hover:text-white transition">Google Flow</div>
+                            <div class="px-3 py-1.5 text-gray-400 text-xs font-semibold hover:text-white transition">Dola AI</div>
+                            <div class="px-3 py-1.5 text-gray-400 text-xs font-semibold hover:text-white transition">Grok AI</div>
+                            <div class="px-3 py-1.5 text-gray-400 text-xs font-semibold hover:text-white transition">Storyboard Maker</div>
+                            <div class="px-3 py-1.5 text-gray-400 text-xs font-semibold hover:text-white transition">Video Karaoke</div>
                         </div>
                         
                         <!-- Content -->
-                        <div class="flex-1 bg-[#18181b] p-8 text-white">
-                            <p class="text-indigo-400 text-[10px] font-bold tracking-wider uppercase mb-2">WORKSPACE</p>
-                            <h2 class="text-2xl font-bold text-white mb-6">Semua sesi, satu tempat.</h2>
+                        <div class="flex-1 bg-[#18181b] p-6 text-white overflow-y-auto">
+                            <div class="flex items-center justify-between mb-4">
+                                <div>
+                                    <p class="text-indigo-400 text-[10px] font-bold tracking-wider uppercase">WORKSPACE AKTIF</p>
+                                    <h2 class="text-lg font-bold text-white">Semua sesi dalam satu layar.</h2>
+                                </div>
+                                <span class="text-[11px] bg-emerald-950/80 text-emerald-300 border border-emerald-800/80 px-2.5 py-0.5 rounded-full font-semibold">● 6 Sesi Aktif</span>
+                            </div>
                             
-                            <div class="grid grid-cols-2 gap-4">
-                                <!-- Card 1 -->
-                                <div class="bg-[#111113] border border-[#27272a] rounded-xl p-4 shadow-sm hover:border-[#3f3f46] transition">
-                                    <h3 class="font-bold text-sm text-white">Google Flow</h3>
-                                    <p class="text-xs text-gray-400 mb-3">3 profil siap</p>
-                                    <button class="bg-[#27272a] hover:bg-[#3f3f46] text-white text-[10px] px-4 py-1.5 rounded-lg font-semibold transition">Buka</button>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div class="bg-[#111113] border border-[#27272a] rounded-xl p-3.5 hover:border-[#3f3f46] transition">
+                                    <div class="flex justify-between items-center mb-1">
+                                        <h3 class="font-bold text-xs text-white">Google Flow</h3>
+                                        <span class="text-[9px] bg-blue-950 text-blue-300 px-1.5 py-0.5 rounded font-mono">3 Akun</span>
+                                    </div>
+                                    <p class="text-[11px] text-gray-400 mb-2.5">Sesi otomasi riset aktif</p>
+                                    <button class="bg-[#27272a] hover:bg-indigo-600 text-white text-[10px] px-3 py-1 rounded-md font-semibold transition">Buka Workspace</button>
                                 </div>
-                                <!-- Card 2 -->
-                                <div class="bg-[#111113] border border-[#27272a] rounded-xl p-4 shadow-sm hover:border-[#3f3f46] transition">
-                                    <h3 class="font-bold text-sm text-white">Dola AI</h3>
-                                    <p class="text-xs text-gray-400 mb-3">2 profil siap</p>
-                                    <button class="bg-[#27272a] hover:bg-[#3f3f46] text-white text-[10px] px-4 py-1.5 rounded-lg font-semibold transition">Buka</button>
+                                <div class="bg-[#111113] border border-[#27272a] rounded-xl p-3.5 hover:border-[#3f3f46] transition">
+                                    <div class="flex justify-between items-center mb-1">
+                                        <h3 class="font-bold text-xs text-white">Dola AI</h3>
+                                        <span class="text-[9px] bg-purple-950 text-purple-300 px-1.5 py-0.5 rounded font-mono">2 Profil</span>
+                                    </div>
+                                    <p class="text-[11px] text-gray-400 mb-2.5">Profil siap digunakan</p>
+                                    <button class="bg-[#27272a] hover:bg-indigo-600 text-white text-[10px] px-3 py-1 rounded-md font-semibold transition">Buka Workspace</button>
                                 </div>
-                                <!-- Card 3 -->
-                                <div class="bg-[#111113] border border-[#27272a] rounded-xl p-4 shadow-sm hover:border-[#3f3f46] transition">
-                                    <h3 class="font-bold text-sm text-white">ChatGPT</h3>
-                                    <p class="text-xs text-gray-400 mb-3">Workspace aktif</p>
-                                    <button class="bg-[#27272a] hover:bg-[#3f3f46] text-white text-[10px] px-4 py-1.5 rounded-lg font-semibold transition">Buka</button>
+                                <div class="bg-[#111113] border border-[#27272a] rounded-xl p-3.5 hover:border-[#3f3f46] transition">
+                                    <div class="flex justify-between items-center mb-1">
+                                        <h3 class="font-bold text-xs text-white">Storyboard</h3>
+                                        <span class="text-[9px] bg-emerald-950 text-emerald-300 px-1.5 py-0.5 rounded font-mono">Studio</span>
+                                    </div>
+                                    <p class="text-[11px] text-gray-400 mb-2.5">Visual scene builder</p>
+                                    <button class="bg-[#27272a] hover:bg-indigo-600 text-white text-[10px] px-3 py-1 rounded-md font-semibold transition">Buka Studio</button>
                                 </div>
-                                <!-- Add New -->
-                                <div class="bg-[#111113]/50 border border-dashed border-[#3f3f46] rounded-xl p-4 flex flex-col items-center justify-center text-gray-400 cursor-pointer hover:bg-[#111113] transition">
-                                    <span class="text-lg mb-1">+</span>
-                                    <span class="text-[10px]">Tambah akun</span>
+                                <div class="bg-[#111113]/50 border border-dashed border-[#3f3f46] rounded-xl p-3.5 flex flex-col items-center justify-center text-gray-400 cursor-pointer hover:bg-[#111113] transition">
+                                    <span class="text-base mb-0.5 text-indigo-400">+</span>
+                                    <span class="text-[10px] font-semibold">Tambah Akun Baru</span>
                                 </div>
                             </div>
                         </div>
@@ -230,26 +268,448 @@ app.get('/', (req, res) => {
                 </div>
 
                 <!-- Floating Badge -->
-                <div class="absolute -bottom-6 right-10 bg-[#111113] text-white px-6 py-4 rounded-xl shadow-2xl border border-[#27272a] flex items-center gap-4 z-20">
-                    <div class="w-3 h-3 bg-green-400 rounded-full shadow-[0_0_10px_rgba(74,222,128,0.8)]"></div>
+                <div class="absolute -bottom-5 right-6 bg-[#111113] text-white px-5 py-3 rounded-xl shadow-2xl border border-[#27272a] flex items-center gap-3 z-20">
+                    <div class="w-3 h-3 bg-emerald-400 rounded-full shadow-[0_0_10px_rgba(52,211,153,0.8)] animate-pulse"></div>
                     <div>
-                        <h4 class="font-bold text-sm text-white">Sesi tersimpan</h4>
-                        <p class="text-xs text-gray-400">Data tetap di perangkat</p>
+                        <h4 class="font-bold text-xs text-white">Sesi Tersimpan Lokal</h4>
+                        <p class="text-[11px] text-gray-400">Privasi & cache aman di PC</p>
                     </div>
                 </div>
             </div>
-        </main>
+        </section>
+
+        <!-- 2. SECTION: PRODUK -->
+        <section id="produk" class="scroll-mt-24 w-full max-w-7xl mx-auto px-6 py-20 border-t border-[#27272a]">
+            <div class="text-center max-w-3xl mx-auto mb-16">
+                <span class="px-3.5 py-1 rounded-full bg-indigo-950/70 border border-indigo-800/60 text-indigo-300 text-xs font-bold uppercase tracking-wider">Produk & Layanan</span>
+                <h2 class="text-3xl md:text-4xl font-extrabold text-white mt-4 mb-3 tracking-tight">Ekosistem Tool AI Terlengkap</h2>
+                <p class="text-gray-400 text-sm md:text-base">Semua modul dibuat khusus untuk mengoptimalkan pembuatan konten, riset, otomasi, dan visualisasi tanpa batasan.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Card 1: Google Flow -->
+                <div class="bg-[#111113] border border-[#27272a] rounded-2xl p-6 glow-card transition duration-300 flex flex-col justify-between">
+                    <div>
+                        <div class="w-12 h-12 rounded-xl bg-blue-950/60 border border-blue-800/50 flex items-center justify-center text-xl mb-4">
+                            🌐
+                        </div>
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 class="text-lg font-bold text-white">Google Flow Manager</h3>
+                            <span class="text-[10px] font-bold bg-blue-950 text-blue-300 px-2 py-0.5 rounded-full border border-blue-800/60">Multi-Akun</span>
+                        </div>
+                        <p class="text-gray-400 text-xs leading-relaxed mb-4">
+                            Jalankan 3 atau lebih akun Google Flow secara simultan dengan sesi terisolasi. Tidak perlu bolak-balik logout atau menggunakan jendela incognito.
+                        </p>
+                    </div>
+                    <ul class="text-xs text-gray-400 space-y-1.5 border-t border-[#27272a] pt-4">
+                        <li class="flex items-center gap-2"><span class="text-emerald-400 font-bold">✓</span> Sesi login tersimpan permanen</li>
+                        <li class="flex items-center gap-2"><span class="text-emerald-400 font-bold">✓</span> Cookie terisolasi per profil</li>
+                    </ul>
+                </div>
+
+                <!-- Card 2: Dola AI -->
+                <div class="bg-[#111113] border border-[#27272a] rounded-2xl p-6 glow-card transition duration-300 flex flex-col justify-between">
+                    <div>
+                        <div class="w-12 h-12 rounded-xl bg-purple-950/60 border border-purple-800/50 flex items-center justify-center text-xl mb-4">
+                            🤖
+                        </div>
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 class="text-lg font-bold text-white">Dola AI Workspace</h3>
+                            <span class="text-[10px] font-bold bg-purple-950 text-purple-300 px-2 py-0.5 rounded-full border border-purple-800/60">Otomasi</span>
+                        </div>
+                        <p class="text-gray-400 text-xs leading-relaxed mb-4">
+                            Ruang kerja khusus untuk Dola AI dengan manajemen multi-akun. Buat prompt riset dan konten secara massal dengan navigasi super cepat.
+                        </p>
+                    </div>
+                    <ul class="text-xs text-gray-400 space-y-1.5 border-t border-[#27272a] pt-4">
+                        <li class="flex items-center gap-2"><span class="text-emerald-400 font-bold">✓</span> Auto-switch antar profil</li>
+                        <li class="flex items-center gap-2"><span class="text-emerald-400 font-bold">✓</span> Riwayat prompt tertata rapi</li>
+                    </ul>
+                </div>
+
+                <!-- Card 3: Grok & ChatGPT -->
+                <div class="bg-[#111113] border border-[#27272a] rounded-2xl p-6 glow-card transition duration-300 flex flex-col justify-between">
+                    <div>
+                        <div class="w-12 h-12 rounded-xl bg-amber-950/60 border border-amber-800/50 flex items-center justify-center text-xl mb-4">
+                            ⚡
+                        </div>
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 class="text-lg font-bold text-white">Grok & ChatGPT Hub</h3>
+                            <span class="text-[10px] font-bold bg-amber-950 text-amber-300 px-2 py-0.5 rounded-full border border-amber-800/60">Smart LLM</span>
+                        </div>
+                        <p class="text-gray-400 text-xs leading-relaxed mb-4">
+                            Akses model bahasa terdepan langsung dari sidebar desktop tanpa perlu membuka browser. Responsif, bebas distraksi, dan selalu siap digunakan.
+                        </p>
+                    </div>
+                    <ul class="text-xs text-gray-400 space-y-1.5 border-t border-[#27272a] pt-4">
+                        <li class="flex items-center gap-2"><span class="text-emerald-400 font-bold">✓</span> Akses cepat via keyboard shortcut</li>
+                        <li class="flex items-center gap-2"><span class="text-emerald-400 font-bold">✓</span> Mode canvas gelap anti-silau</li>
+                    </ul>
+                </div>
+
+                <!-- Card 4: Storyboard Maker -->
+                <div class="bg-[#111113] border border-[#27272a] rounded-2xl p-6 glow-card transition duration-300 flex flex-col justify-between">
+                    <div>
+                        <div class="w-12 h-12 rounded-xl bg-pink-950/60 border border-pink-800/50 flex items-center justify-center text-xl mb-4">
+                            🎬
+                        </div>
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 class="text-lg font-bold text-white">Storyboard Maker</h3>
+                            <span class="text-[10px] font-bold bg-pink-950 text-pink-300 px-2 py-0.5 rounded-full border border-pink-800/60">Creative</span>
+                        </div>
+                        <p class="text-gray-400 text-xs leading-relaxed mb-4">
+                            Rancang alur video, visualisasi tiap adegan, dan integrasikan naskah audio langsung ke dalam kanvas visual yang terorganisir per scene.
+                        </p>
+                    </div>
+                    <ul class="text-xs text-gray-400 space-y-1.5 border-t border-[#27272a] pt-4">
+                        <li class="flex items-center gap-2"><span class="text-emerald-400 font-bold">✓</span> Timeline adegan visual</li>
+                        <li class="flex items-center gap-2"><span class="text-emerald-400 font-bold">✓</span> Sinkronisasi prompt image AI</li>
+                    </ul>
+                </div>
+
+                <!-- Card 5: Video Karaoke -->
+                <div class="bg-[#111113] border border-[#27272a] rounded-2xl p-6 glow-card transition duration-300 flex flex-col justify-between">
+                    <div>
+                        <div class="w-12 h-12 rounded-xl bg-cyan-950/60 border border-cyan-800/50 flex items-center justify-center text-xl mb-4">
+                            🎤
+                        </div>
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 class="text-lg font-bold text-white">AI Video Karaoke</h3>
+                            <span class="text-[10px] font-bold bg-cyan-950 text-cyan-300 px-2 py-0.5 rounded-full border border-cyan-800/60">AI Audio</span>
+                        </div>
+                        <p class="text-gray-400 text-xs leading-relaxed mb-4">
+                            Transkripsi cerdas audio menggunakan Google Gemini AI dengan penandaan waktu presisi kata per kata, playback live, dan rendering subtitle.
+                        </p>
+                    </div>
+                    <ul class="text-xs text-gray-400 space-y-1.5 border-t border-[#27272a] pt-4">
+                        <li class="flex items-center gap-2"><span class="text-emerald-400 font-bold">✓</span> Transkripsi otomatis Google Gemini</li>
+                        <li class="flex items-center gap-2"><span class="text-emerald-400 font-bold">✓</span> Export video karaoke siap tayang</li>
+                    </ul>
+                </div>
+
+                <!-- Card 6: Multi-Session Engine -->
+                <div class="bg-[#111113] border border-[#27272a] rounded-2xl p-6 glow-card transition duration-300 flex flex-col justify-between">
+                    <div>
+                        <div class="w-12 h-12 rounded-xl bg-indigo-950/60 border border-indigo-800/50 flex items-center justify-center text-xl mb-4">
+                            🛡️
+                        </div>
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 class="text-lg font-bold text-white">Sandbox Isolation Engine</h3>
+                            <span class="text-[10px] font-bold bg-indigo-950 text-indigo-300 px-2 py-0.5 rounded-full border border-indigo-800/60">Security</span>
+                        </div>
+                        <p class="text-gray-400 text-xs leading-relaxed mb-4">
+                            Teknologi partisi container khusus yang memisahkan storage, cache, dan data autentikasi setiap akun tanpa saling mencemari.
+                        </p>
+                    </div>
+                    <ul class="text-xs text-gray-400 space-y-1.5 border-t border-[#27272a] pt-4">
+                        <li class="flex items-center gap-2"><span class="text-emerald-400 font-bold">✓</span> Bebas bentrok session cookie</li>
+                        <li class="flex items-center gap-2"><span class="text-emerald-400 font-bold">✓</span> Proteksi data lokal maksimal</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. SECTION: KEUNGGULAN -->
+        <section id="keunggulan" class="scroll-mt-24 w-full max-w-7xl mx-auto px-6 py-20 border-t border-[#27272a]">
+            <div class="text-center max-w-3xl mx-auto mb-16">
+                <span class="px-3.5 py-1 rounded-full bg-emerald-950/70 border border-emerald-800/60 text-emerald-300 text-xs font-bold uppercase tracking-wider">Mengapa ShotAI?</span>
+                <h2 class="text-3xl md:text-4xl font-extrabold text-white mt-4 mb-3 tracking-tight">Keunggulan Dibandingkan Browser Biasa</h2>
+                <p class="text-gray-400 text-sm md:text-base">Dirancang spesifik untuk kreator konten dan praktisi otomasi yang membutuhkan efisiensi dan kecepatan tanpa kompromi.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-[#111113] border border-[#27272a] rounded-2xl p-7 flex gap-5 hover:border-indigo-500/50 transition">
+                    <div class="w-12 h-12 rounded-xl bg-indigo-950 border border-indigo-800/60 flex-shrink-0 flex items-center justify-center text-indigo-400 font-bold text-lg">
+                        01
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-white mb-2">Isolasi Profil 100% Mandiri</h3>
+                        <p class="text-gray-400 text-xs leading-relaxed">
+                            Setiap profil AI berjalan di container Electron terpisah dengan direktori partisi sendiri. Tidak ada risiko akun tertukar, tidak ada sesi yang terhapus tiba-tiba, dan tidak perlu puluhan jendela browser yang berantakan.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="bg-[#111113] border border-[#27272a] rounded-2xl p-7 flex gap-5 hover:border-indigo-500/50 transition">
+                    <div class="w-12 h-12 rounded-xl bg-purple-950 border border-purple-800/60 flex-shrink-0 flex items-center justify-center text-purple-400 font-bold text-lg">
+                        02
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-white mb-2">Privasi & Keamanan Data Lokal</h3>
+                        <p class="text-gray-400 text-xs leading-relaxed">
+                            Data kredensial dan sesi kerja tersimpan langsung di storage perangkat komputer Anda. Kami tidak menyimpan login session Anda di server pihak ketiga, menjamin kerahasiaan penuh pada akun dan proyek Anda.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="bg-[#111113] border border-[#27272a] rounded-2xl p-7 flex gap-5 hover:border-indigo-500/50 transition">
+                    <div class="w-12 h-12 rounded-xl bg-emerald-950 border border-emerald-800/60 flex-shrink-0 flex items-center justify-center text-emerald-400 font-bold text-lg">
+                        03
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-white mb-2">Hemat RAM & Optimalisasi Resource</h3>
+                        <p class="text-gray-400 text-xs leading-relaxed">
+                            Dibangun dengan manajemen memori cerdas yang menonaktifkan proses background tidak aktif saat sedang fokus pada satu workspace, membuat PC Anda tetap enteng dan responsif sepanjang hari.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="bg-[#111113] border border-[#27272a] rounded-2xl p-7 flex gap-5 hover:border-indigo-500/50 transition">
+                    <div class="w-12 h-12 rounded-xl bg-cyan-950 border border-cyan-800/60 flex-shrink-0 flex items-center justify-center text-cyan-400 font-bold text-lg">
+                        04
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-white mb-2">Sistem Lisensi & Update Otomatis</h3>
+                        <p class="text-gray-400 text-xs leading-relaxed">
+                            Aktivasi kode lisensi langsung dari aplikasi, integrasi login Google ke portal pelanggan, dan pembaruan berkala otomatis memastikan Anda selalu mendapatkan fitur dan kompatibilitas AI paling mutakhir.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 4. SECTION: TUTORIAL -->
+        <section id="tutorial" class="scroll-mt-24 w-full max-w-7xl mx-auto px-6 py-20 border-t border-[#27272a]">
+            <div class="text-center max-w-3xl mx-auto mb-16">
+                <span class="px-3.5 py-1 rounded-full bg-purple-950/70 border border-purple-800/60 text-purple-300 text-xs font-bold uppercase tracking-wider">Tutorial & Panduan</span>
+                <h2 class="text-3xl md:text-4xl font-extrabold text-white mt-4 mb-3 tracking-tight">Cara Mudah Memulai ShotAI</h2>
+                <p class="text-gray-400 text-sm md:text-base">Mulai optimalkan alur kerja AI Anda hanya dalam beberapa langkah sederhana.</p>
+            </div>
+
+            <!-- Steps Grid -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-14">
+                <div class="bg-[#111113] border border-[#27272a] rounded-2xl p-6 relative">
+                    <div class="w-8 h-8 rounded-full bg-indigo-600 text-white font-black text-xs flex items-center justify-center mb-4">1</div>
+                    <h3 class="font-bold text-white text-base mb-2">Download & Install</h3>
+                    <p class="text-xs text-gray-400 leading-relaxed">
+                        Unduh installer aplikasi ShotAi untuk Windows 10/11. Jalankan proses instalasi dengan sekali klik tanpa ribet.
+                    </p>
+                </div>
+
+                <div class="bg-[#111113] border border-[#27272a] rounded-2xl p-6 relative">
+                    <div class="w-8 h-8 rounded-full bg-indigo-600 text-white font-black text-xs flex items-center justify-center mb-4">2</div>
+                    <h3 class="font-bold text-white text-base mb-2">Login & Ambil Lisensi</h3>
+                    <p class="text-xs text-gray-400 leading-relaxed">
+                        Buka portal <a href="/login" class="text-indigo-400 underline font-semibold">Login</a> dengan akun Google Anda. Buka Dashboard Pelanggan dan salin kode lisensi aktif Anda.
+                    </p>
+                </div>
+
+                <div class="bg-[#111113] border border-[#27272a] rounded-2xl p-6 relative">
+                    <div class="w-8 h-8 rounded-full bg-indigo-600 text-white font-black text-xs flex items-center justify-center mb-4">3</div>
+                    <h3 class="font-bold text-white text-base mb-2">Aktivasi Desktop</h3>
+                    <p class="text-xs text-gray-400 leading-relaxed">
+                        Masukkan kode lisensi pada tampilan awal aplikasi desktop ShotAi. Aplikasi akan teraktivasi secara instan.
+                    </p>
+                </div>
+
+                <div class="bg-[#111113] border border-[#27272a] rounded-2xl p-6 relative">
+                    <div class="w-8 h-8 rounded-full bg-indigo-600 text-white font-black text-xs flex items-center justify-center mb-4">4</div>
+                    <h3 class="font-bold text-white text-base mb-2">Mulai Bekerja</h3>
+                    <p class="text-xs text-gray-400 leading-relaxed">
+                        Klik "+ Tambah Akun", pilih layanan AI (Google Flow, Dola, Grok, dll), dan nikmati multi-workspace terpadu!
+                    </p>
+                </div>
+            </div>
+
+            <!-- Interactive FAQ Accordion -->
+            <div class="max-w-3xl mx-auto bg-[#111113] border border-[#27272a] rounded-2xl p-6 md:p-8">
+                <h3 class="text-lg font-bold text-white mb-6 flex items-center gap-2">
+                    <span>💡</span>
+                    <span>Pertanyaan yang Sering Diajukan (FAQ)</span>
+                </h3>
+
+                <div class="space-y-4">
+                    <!-- Q1 -->
+                    <div class="border-b border-[#27272a] pb-4">
+                        <button class="w-full text-left font-semibold text-sm text-white flex justify-between items-center focus:outline-none" onclick="toggleFaq('faq1')">
+                            <span>Apakah login akun Google di ShotAI aman?</span>
+                            <span id="faq1-icon" class="text-indigo-400 font-bold text-lg">+</span>
+                        </button>
+                        <p id="faq1" class="hidden text-xs text-gray-400 mt-2 leading-relaxed">
+                            Sangat aman. ShotAi bekerja langsung di desktop lokal Anda menggunakan engine Electron terisolasi. Seluruh sesi, token, dan cookie disimpan di komputer Anda dan tidak diunggah ke pihak ketiga.
+                        </p>
+                    </div>
+
+                    <!-- Q2 -->
+                    <div class="border-b border-[#27272a] pb-4">
+                        <button class="w-full text-left font-semibold text-sm text-white flex justify-between items-center focus:outline-none" onclick="toggleFaq('faq2')">
+                            <span>Bagaimana jika masa aktif lisensi saya telah habis?</span>
+                            <span id="faq2-icon" class="text-indigo-400 font-bold text-lg">+</span>
+                        </button>
+                        <p id="faq2" class="hidden text-xs text-gray-400 mt-2 leading-relaxed">
+                            Anda dapat memperpanjang masa aktif lisensi kapan saja dengan menghubungi admin WhatsApp atau login ke Dashboard Pelanggan untuk menautkan lisensi baru yang telah diperpanjang.
+                        </p>
+                    </div>
+
+                    <!-- Q3 -->
+                    <div class="border-b border-[#27272a] pb-4">
+                        <button class="w-full text-left font-semibold text-sm text-white flex justify-between items-center focus:outline-none" onclick="toggleFaq('faq3')">
+                            <span>Apakah ShotAI dapat digunakan di banyak perangkat?</span>
+                            <span id="faq3-icon" class="text-indigo-400 font-bold text-lg">+</span>
+                        </button>
+                        <p id="faq3" class="hidden text-xs text-gray-400 mt-2 leading-relaxed">
+                            Setiap lisensi ditautkan dengan akun pemiliknya. Anda dapat mengelola lisensi melalui dashboard dan memindahkan perangkat dengan bantuan tim support kami.
+                        </p>
+                    </div>
+
+                    <!-- Q4 -->
+                    <div>
+                        <button class="w-full text-left font-semibold text-sm text-white flex justify-between items-center focus:outline-none" onclick="toggleFaq('faq4')">
+                            <span>Bagaimana cara mendapatkan update ke versi terbaru?</span>
+                            <span id="faq4-icon" class="text-indigo-400 font-bold text-lg">+</span>
+                        </button>
+                        <p id="faq4" class="hidden text-xs text-gray-400 mt-2 leading-relaxed">
+                            ShotAi dilengkapi sistem auto-updater. Setiap kali pembaruan fitur dirilis, aplikasi akan otomatis memberi notifikasi untuk mengunduh update terbaru secara gratis.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 5. SECTION: TOKO / LISENSI -->
+        <section id="toko" class="scroll-mt-24 w-full max-w-7xl mx-auto px-6 py-20 border-t border-[#27272a]">
+            <div class="text-center max-w-3xl mx-auto mb-16">
+                <span class="px-3.5 py-1 rounded-full bg-cyan-950/70 border border-cyan-800/60 text-cyan-300 text-xs font-bold uppercase tracking-wider">Toko & Pilihan Lisensi</span>
+                <h2 class="text-3xl md:text-4xl font-extrabold text-white mt-4 mb-3 tracking-tight">Pilih Paket Lisensi ShotAI</h2>
+                <p class="text-gray-400 text-sm md:text-base">Investasi terbaik untuk akselerasi produktivitas konten kreator, freelancer, dan digital agency.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+                <!-- Package 1: 1 Bulan -->
+                <div class="bg-[#111113] border border-[#27272a] rounded-2xl p-7 flex flex-col justify-between hover:border-indigo-500/50 transition">
+                    <div>
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400 bg-[#18181b] px-3 py-1 rounded-full border border-[#27272a]">Bulanan</span>
+                        <h3 class="text-xl font-bold text-white mt-4">Paket 1 Bulan</h3>
+                        <p class="text-xs text-gray-400 mt-1 mb-5">Pilihan tepat untuk project bulanan atau mencoba seluruh fitur.</p>
+                        
+                        <div class="mb-6">
+                            <span class="text-3xl font-black text-white">Rp 49.000</span>
+                            <span class="text-xs text-gray-400 font-medium"> / bulan</span>
+                        </div>
+
+                        <ul class="text-xs text-gray-300 space-y-2.5 mb-6">
+                            <li class="flex items-center gap-2"><span class="text-indigo-400 font-bold">✓</span> Masa aktif 30 hari penuh</li>
+                            <li class="flex items-center gap-2"><span class="text-indigo-400 font-bold">✓</span> Multi-akun Google Flow & Dola</li>
+                            <li class="flex items-center gap-2"><span class="text-indigo-400 font-bold">✓</span> Storyboard Maker Studio</li>
+                            <li class="flex items-center gap-2"><span class="text-indigo-400 font-bold">✓</span> AI Video Karaoke Sync</li>
+                        </ul>
+                    </div>
+                    <a href="https://wa.me/6285261475052?text=Halo%20Admin,%20saya%20ingin%20membeli%20Lisensi%20ShotAi%20Paket%201%20Bulan" target="_blank" class="w-full text-center bg-[#18181b] hover:bg-[#27272a] text-white border border-[#27272a] hover:border-indigo-500 font-bold py-2.5 px-4 rounded-xl text-xs transition">
+                        Pesan via WhatsApp
+                    </a>
+                </div>
+
+                <!-- Package 2: 1 Tahun (Popular) -->
+                <div class="bg-[#111113] border-2 border-indigo-500/80 rounded-2xl p-7 flex flex-col justify-between relative shadow-xl shadow-indigo-950/40">
+                    <div class="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-[10px] font-extrabold uppercase tracking-wider py-1 px-4 rounded-full shadow">
+                        Paling Populer
+                    </div>
+                    <div>
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-indigo-300 bg-indigo-950/60 px-3 py-1 rounded-full border border-indigo-800/60">Tahunan</span>
+                        <h3 class="text-xl font-bold text-white mt-4">Paket 1 Tahun</h3>
+                        <p class="text-xs text-gray-400 mt-1 mb-5">Hemat lebih dari 50% untuk kreator aktif dan profesional.</p>
+                        
+                        <div class="mb-6">
+                            <span class="text-3xl font-black text-white">Rp 249.000</span>
+                            <span class="text-xs text-gray-400 font-medium"> / tahun</span>
+                        </div>
+
+                        <ul class="text-xs text-gray-300 space-y-2.5 mb-6">
+                            <li class="flex items-center gap-2"><span class="text-emerald-400 font-bold">✓</span> Masa aktif 365 hari penuh</li>
+                            <li class="flex items-center gap-2"><span class="text-emerald-400 font-bold">✓</span> Semua fitur modul AI lengkap</li>
+                            <li class="flex items-center gap-2"><span class="text-emerald-400 font-bold">✓</span> Storyboard Maker & Karaoke</li>
+                            <li class="flex items-center gap-2"><span class="text-emerald-400 font-bold">✓</span> Prioritas update & support VIP</li>
+                        </ul>
+                    </div>
+                    <a href="https://wa.me/6285261475052?text=Halo%20Admin,%20saya%20ingin%20membeli%20Lisensi%20ShotAi%20Paket%201%20Tahun" target="_blank" class="w-full text-center bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition shadow-lg shadow-indigo-600/30">
+                        Pesan Paket 1 Tahun
+                    </a>
+                </div>
+
+                <!-- Package 3: Lifetime -->
+                <div class="bg-[#111113] border border-[#27272a] rounded-2xl p-7 flex flex-col justify-between hover:border-purple-500/50 transition">
+                    <div>
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-purple-300 bg-purple-950/60 px-3 py-1 rounded-full border border-purple-800/60">Lifetime</span>
+                        <h3 class="text-xl font-bold text-white mt-4">Selamanya / Lifetime</h3>
+                        <p class="text-xs text-gray-400 mt-1 mb-5">Sekali bayar, akses selamanya tanpa perlu perpanjang lisensi.</p>
+                        
+                        <div class="mb-6">
+                            <span class="text-3xl font-black text-white">Rp 499.000</span>
+                            <span class="text-xs text-gray-400 font-medium"> / sekali bayar</span>
+                        </div>
+
+                        <ul class="text-xs text-gray-300 space-y-2.5 mb-6">
+                            <li class="flex items-center gap-2"><span class="text-purple-400 font-bold">✓</span> Masa aktif permanen seumur hidup</li>
+                            <li class="flex items-center gap-2"><span class="text-purple-400 font-bold">✓</span> Semua modul & fitur mendatang</li>
+                            <li class="flex items-center gap-2"><span class="text-purple-400 font-bold">✓</span> Bebas biaya bulanan selamanya</li>
+                            <li class="flex items-center gap-2"><span class="text-purple-400 font-bold">✓</span> Bantuan teknis langsung WhatsApp</li>
+                        </ul>
+                    </div>
+                    <a href="https://wa.me/6285261475052?text=Halo%20Admin,%20saya%20ingin%20membeli%20Lisensi%20ShotAi%20Paket%20Lifetime" target="_blank" class="w-full text-center bg-[#18181b] hover:bg-[#27272a] text-white border border-[#27272a] hover:border-purple-500 font-bold py-2.5 px-4 rounded-xl text-xs transition">
+                        Dapatkan Akses Lifetime
+                    </a>
+                </div>
+            </div>
+        </section>
 
         <!-- Footer -->
-        <footer class="w-full max-w-7xl mx-auto px-6 py-8 border-t border-[#27272a] mt-auto flex flex-col md:flex-row justify-between items-center gap-4">
-            <div class="font-bold text-sm text-gray-300">Akun Anda. Sesi Anda. Workflow Anda.</div>
-            <div class="flex gap-6 text-xs text-gray-500 font-medium">
-                <span>Profil terpisah</span>
-                <span>Sesi lokal</span>
-                <span>Lisensi online</span>
-                <span>Pembaruan aman</span>
+        <footer class="w-full max-w-7xl mx-auto px-6 py-10 border-t border-[#27272a] mt-auto">
+            <div class="flex flex-col md:flex-row justify-between items-center gap-6">
+                <div class="flex items-center gap-3">
+                    <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+                        <span class="text-white font-black text-xs">SA</span>
+                    </div>
+                    <div>
+                        <span class="font-bold text-sm text-white">ShotAI Workspace</span>
+                        <p class="text-[11px] text-gray-500">Akun Anda. Sesi Anda. Workflow Anda.</p>
+                    </div>
+                </div>
+
+                <!-- Footer Navigation -->
+                <div class="flex flex-wrap items-center justify-center gap-6 text-xs text-gray-400 font-medium">
+                    <a href="#home" class="hover:text-white transition">Home</a>
+                    <a href="#produk" class="hover:text-white transition">Produk</a>
+                    <a href="#keunggulan" class="hover:text-white transition">Keunggulan</a>
+                    <a href="#tutorial" class="hover:text-white transition">Tutorial</a>
+                    <a href="#toko" class="hover:text-white transition">Toko</a>
+                    <a href="/login" class="text-indigo-400 hover:text-indigo-300 font-semibold transition">Portal Login</a>
+                    <a href="https://wa.me/6285261475052" target="_blank" class="text-emerald-400 hover:text-emerald-300 font-semibold transition">WhatsApp Admin</a>
+                </div>
+            </div>
+            <div class="text-center text-xs text-gray-600 mt-8 pt-4 border-t border-[#27272a]/50">
+                &copy; 2026 ShotAI. Hak cipta dilindungi undang-undang.
             </div>
         </footer>
+
+        <script>
+            // Mobile Menu Toggle
+            const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+            const mobileMenu = document.getElementById('mobileMenu');
+            if (mobileMenuBtn && mobileMenu) {
+                mobileMenuBtn.addEventListener('click', () => {
+                    mobileMenu.classList.toggle('hidden');
+                });
+            }
+
+            function closeMobileMenu() {
+                if (mobileMenu) mobileMenu.classList.add('hidden');
+            }
+
+            // Interactive FAQ Accordion Toggle
+            function toggleFaq(id) {
+                const el = document.getElementById(id);
+                const icon = document.getElementById(id + '-icon');
+                if (!el) return;
+                const isHidden = el.classList.contains('hidden');
+                if (isHidden) {
+                    el.classList.remove('hidden');
+                    if (icon) icon.textContent = '−';
+                } else {
+                    el.classList.add('hidden');
+                    if (icon) icon.textContent = '+';
+                }
+            }
+        </script>
     </body>
     </html>
   `;
