@@ -4,23 +4,41 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Custom Scrollbar for a premium feel */
-::-webkit-scrollbar {
+:root {
+  color-scheme: dark;
+}
+
+/* Universal Dark Scrollbar for all panels and elements */
+*, html, body {
+  scrollbar-width: thin;
+  scrollbar-color: #3f3f46 #111113;
+}
+
+::-webkit-scrollbar,
+*::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
-::-webkit-scrollbar-track {
-  background: transparent;
+::-webkit-scrollbar-track,
+*::-webkit-scrollbar-track {
+  background: #111113;
 }
 
-::-webkit-scrollbar-thumb {
-  background: #27272a;
+::-webkit-scrollbar-thumb,
+*::-webkit-scrollbar-thumb {
+  background: #3f3f46;
   border-radius: 9999px;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: #3f3f46;
+::-webkit-scrollbar-thumb:hover,
+*::-webkit-scrollbar-thumb:hover {
+  background: #52525b;
+}
+
+::-webkit-scrollbar-corner,
+*::-webkit-scrollbar-corner {
+  background: #111113;
 }
 
 body {

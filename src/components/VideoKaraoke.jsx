@@ -936,7 +936,7 @@ function AudioWaveformCanvas({ file, currentTime, duration, sourceStart = 0, sou
 }
 
 /* ─── Timeline Track (Multi-Track Kolam) ─────────────────────── */
-function TimelineTrack({ tracks, setTracks, lines, setLines, duration, currentTime, onSeek, selectedLineIdx, setSelectedLineIdx, selectedTrackItemId, setSelectedTrackItemId, onRemoveTrack, zoom, setZoom, onStatusChange, setIsPlaying, setAudioUrl, audioRef, stopMediaBinPreview, clipboardItem: externalClipboardItem, setClipboardItem: externalSetClipboardItem, markers = [], setMarkers, useLyricsVersion = true, coverPhotoUrl, setCoverPhotoUrl }) {
+function TimelineTrack({ tracks, setTracks, lines, setLines, duration, currentTime, onSeek, selectedLineIdx, setSelectedLineIdx, selectedTrackItemId, setSelectedTrackItemId, onRemoveTrack, zoom, setZoom, onStatusChange, setIsPlaying, setAudioUrl, audioRef, videoRef, videoAudioRef, stopMediaBinPreview, clipboardItem: externalClipboardItem, setClipboardItem: externalSetClipboardItem, markers = [], setMarkers, useLyricsVersion = true, coverPhotoUrl, setCoverPhotoUrl }) {
   const scrollRef = useRef(null);
   const rulerRef = useRef(null);
   const headerScrollRef = useRef(null);
@@ -1314,18 +1314,37 @@ function TimelineTrack({ tracks, setTracks, lines, setLines, duration, currentTi
   const resizeHeaderStartXRef = useRef(0);
   const initialHeaderWidthRef = useRef(120);
 
-  // ── Timeline Container Width for Dynamic Zoom (Fit to Screen) ──
+  // ── Timeline Container Dimensions for Dynamic Zoom & Vertical Scroll Lock ──
   const [containerWidth, setContainerWidth] = useState(800);
+  const [containerHeight, setContainerHeight] = useState(300);
   useEffect(() => {
     if (!scrollRef.current) return;
     const observer = new ResizeObserver(entries => {
       for (let entry of entries) {
         setContainerWidth(entry.contentRect.width);
+        setContainerHeight(entry.contentRect.height);
       }
     });
     observer.observe(scrollRef.current);
     return () => observer.disconnect();
   }, []);
+
+  // Calculate total rendered height of all tracks + ruler
+  const totalTracksHeight = useMemo(() => {
+    let h = 20; // Ruler 20px
+    h += (lines || []).length * 42; // Teks 42px each
+    if ((lines || []).length > 0 && visualTracks.length === 0) h += 42; // Placeholder visual track
+    (tracks || []).forEach(t => {
+      if (t.type === 'text') h += 36;
+      else if (t.type === 'effect' || t.isEffectTrack) h += 30;
+      else if (t.type === 'audio') h += 42;
+      else h += 90; // Video / Image
+    });
+    return h;
+  }, [lines, visualTracks, tracks]);
+
+  // Mouse wheel vertical scroll is strictly active ONLY when tracks exceed container height
+  const hasVerticalOverflow = totalTracksHeight > (containerHeight - 10);
 
   const startResizingHeader = (e) => {
     e.preventDefault();
@@ -1420,26 +1439,99 @@ function TimelineTrack({ tracks, setTracks, lines, setLines, duration, currentTi
     }
   }, [currentCategory, baseSpan, cWidth, setZoom]);
 
-  // ── Playhead Needle Dragging (Jarum Biru) ─────────────────────
+  // ── Playhead Needle Dragging (Jarum Biru) with Magnetic Snapping at Clip Cuts/Transitions ──
   useEffect(() => {
     if (!isDraggingPlayhead) return;
     if (!hasTimelineData || maxTimelineEnd <= 0) {
       setIsDraggingPlayhead(false);
+      setSnapGuideTime(null);
       return;
     }
+
+    // Collect all clip transition/cut points in timeline
+    const cutPoints = [];
+    const adjoiningPoints = new Set(); // Points where two clips connect (sambungan video)
+    
+    tracks.forEach(t => {
+      const items = (t.items || []).slice().sort((a, b) => a.start - b.start);
+      items.forEach((it, idx) => {
+        if (typeof it.start === 'number') cutPoints.push(it.start);
+        if (typeof it.end === 'number') cutPoints.push(it.end);
+        if (idx < items.length - 1 && Math.abs(it.end - items[idx + 1].start) < 0.12) {
+          adjoiningPoints.add(Number(it.end.toFixed(3)));
+        }
+      });
+    });
+    (lines || []).forEach((l, idx, arr) => {
+      if (typeof l.start === 'number') cutPoints.push(l.start);
+      if (typeof l.end === 'number') cutPoints.push(l.end);
+      if (idx < arr.length - 1 && Math.abs(l.end - arr[idx + 1].start) < 0.12) {
+        adjoiningPoints.add(Number(l.end.toFixed(3)));
+      }
+    });
+    (markers || []).forEach(m => {
+      if (typeof m.time === 'number') cutPoints.push(m.time);
+    });
+    const uniquePoints = Array.from(new Set(cutPoints)).sort((a, b) => a - b);
+
+    // Latch state: holds the playhead still ("berhenti sejenak") until mouse travels past resistance
+    let latchedPoint = null;
+    let latchClientX = null;
+    const LATCH_RELEASE_PX = 20; // Pixel resistance distance before breaking free from video transition
 
     const handlePlayheadMove = (e) => {
       if (!rulerRef.current) return;
       const rect = rulerRef.current.getBoundingClientRect();
       const rawX = e.clientX - rect.left - TIMELINE_START_OFFSET;
       const rawTime = (rawX / totalPx) * safeDuration;
-      // Clamped to [0, maxTimelineEnd]. Cannot exceed the end of the last item in timeline!
-      const clamped = Math.max(0, Math.min(maxTimelineEnd, rawTime));
+      let clamped = Math.max(0, Math.min(maxTimelineEnd, rawTime));
+
+      // If currently latched at a video transition point, resist mouse movement ("berhenti sejenak")
+      if (latchedPoint !== null && latchClientX !== null) {
+        const movedDist = Math.abs(e.clientX - latchClientX);
+        if (movedDist < LATCH_RELEASE_PX) {
+          onSeek(latchedPoint);
+          setSnapGuideTime(latchedPoint);
+          return;
+        } else {
+          // User deliberately pulled past threshold, unlatch
+          latchedPoint = null;
+          latchClientX = null;
+        }
+      }
+
+      // Magnetic snap threshold: ~24px for video joins (sambungan), ~16px for regular cuts
+      let snappedPoint = null;
+      let closestDist = Infinity;
+
+      for (const pt of uniquePoints) {
+        const isAdjoining = adjoiningPoints.has(Number(pt.toFixed(3)));
+        const snapTolPx = isAdjoining ? 24 : 16;
+        const snapTolSec = Math.max(0.14, (snapTolPx / totalPx) * safeDuration);
+        const dist = Math.abs(rawTime - pt);
+        if (dist <= snapTolSec && dist < closestDist) {
+          closestDist = dist;
+          snappedPoint = pt;
+        }
+      }
+
+      if (snappedPoint !== null) {
+        clamped = snappedPoint;
+        latchedPoint = snappedPoint;
+        latchClientX = e.clientX;
+        setSnapGuideTime(snappedPoint);
+      } else {
+        setSnapGuideTime(null);
+      }
+
       onSeek(Number(clamped.toFixed(3)));
     };
 
     const handlePlayheadUp = () => {
       setIsDraggingPlayhead(false);
+      setSnapGuideTime(null);
+      latchedPoint = null;
+      latchClientX = null;
     };
 
     window.addEventListener('mousemove', handlePlayheadMove);
@@ -1448,7 +1540,7 @@ function TimelineTrack({ tracks, setTracks, lines, setLines, duration, currentTi
       window.removeEventListener('mousemove', handlePlayheadMove);
       window.removeEventListener('mouseup', handlePlayheadUp);
     };
-  }, [isDraggingPlayhead, hasTimelineData, maxTimelineEnd, totalPx, safeDuration, onSeek]);
+  }, [isDraggingPlayhead, hasTimelineData, maxTimelineEnd, totalPx, safeDuration, onSeek, tracks, lines, markers]);
 
   // -- Item Dragging (Ghost drag, magnetic snapping, vertical track hopping, new track creation) --
   useEffect(() => {
@@ -1993,103 +2085,118 @@ function TimelineTrack({ tracks, setTracks, lines, setLines, duration, currentTi
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
         
         {/* ── Track Header Column (Minimalist, Sticky Left) ── */}
-        <div ref={headerScrollRef} style={{ width: hasTimelineData ? `${headerWidth}px` : '0px', flexShrink: 0, borderRight: hasTimelineData ? '1px solid #27272a' : 'none', backgroundColor: '#111113', display: 'flex', flexDirection: 'column', zIndex: 100, overflowY: 'hidden', overflowX: 'hidden', transition: 'width 0.15s ease' }}>
-          {/* Ruler spacer */}
-          <div style={{ height: '20px', borderBottom: '1px solid #27272a', backgroundColor: '#09090b', flexShrink: 0, position: 'sticky', top: 0, zIndex: 110 }} />
+        <div style={{ width: hasTimelineData ? `${headerWidth}px` : '0px', flexShrink: 0, borderRight: hasTimelineData ? '1px solid #27272a' : 'none', backgroundColor: '#111113', display: 'flex', flexDirection: 'column', zIndex: 130, overflow: 'hidden', transition: 'width 0.15s ease' }}>
+          {/* Ruler spacer - fixed at top, never scrolls away */}
+          <div style={{ height: '20px', borderBottom: '1px solid #27272a', backgroundColor: '#09090b', flexShrink: 0 }} />
           
-          {hasTimelineData && (
-            <>
-              {/* Kolam Teks Masing-Masing (Header) */}
-              {lines.map((line, i) => {
-                const isHidden = Boolean(line.hidden);
-                const isLocked = Boolean(line.locked);
-                return (
-                  <div key={`header-text-${line.id || i}`}
-                    draggable={!line.locked}
-                    onDragStart={(e) => handleTextTrackDragStart(e, i)}
-                    onDragOver={(e) => handleTextTrackDragOver(e, i)}
-                    onDragEnd={handleTextTrackDragEnd}
-                    style={{
-                      height: '42px',
-                      borderBottom: 'none',
-                      backgroundColor: '#111113',
-                      display: 'flex',
-                      alignItems: 'center',
-                      padding: '0 8px',
-                      gap: '8px',
-                      flexShrink: 0,
-                      cursor: line.locked ? 'default' : 'grab',
-                      opacity: draggingTextTrackIdx === i ? 0.5 : 1
-                    }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1px', color: '#a1a1aa', fontWeight: 600, fontSize: '13px', fontFamily: 'sans-serif', flexShrink: 0 }} title={`Kolam Teks ${i + 1} (Tarik untuk tukar posisi)`}>
-                      <span>T</span>
-                      <span style={{ fontSize: '11px', opacity: 0.6, marginLeft: '0.5px' }}>|</span>
+          {/* Track Headers List - scrolls vertically in exact sync with timeline tracks */}
+          <div ref={headerScrollRef} style={{ flex: 1, overflowY: 'hidden', overflowX: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            {hasTimelineData && (
+              <>
+                {/* Kolam Teks Masing-Masing (Header) */}
+                {lines.map((line, i) => {
+                  const isHidden = Boolean(line.hidden);
+                  const isLocked = Boolean(line.locked);
+                  return (
+                    <div key={`header-text-${line.id || i}`}
+                      draggable={!line.locked}
+                      onDragStart={(e) => handleTextTrackDragStart(e, i)}
+                      onDragOver={(e) => handleTextTrackDragOver(e, i)}
+                      onDragEnd={handleTextTrackDragEnd}
+                      style={{
+                        height: '42px',
+                        borderBottom: 'none',
+                        backgroundColor: '#111113',
+                        display: 'flex',
+                        alignItems: 'center',
+                        padding: '0 8px',
+                        gap: '8px',
+                        flexShrink: 0,
+                        cursor: line.locked ? 'default' : 'grab',
+                        opacity: draggingTextTrackIdx === i ? 0.5 : 1
+                      }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '1px', color: '#a1a1aa', fontWeight: 600, fontSize: '13px', fontFamily: 'sans-serif', flexShrink: 0 }} title={`Kolam Teks ${i + 1} (Tarik untuk tukar posisi)`}>
+                        <span>T</span>
+                        <span style={{ fontSize: '11px', opacity: 0.6, marginLeft: '0.5px' }}>|</span>
+                      </div>
+                      {/* Tombol Gembok Teks */}
+                      <div 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setLines(prev => prev.map((l, idx) => idx === i ? { ...l, locked: !l.locked } : l));
+                        }}
+                        title={isLocked ? "Buka kunci trek teks" : "Kunci trek teks"}
+                        style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                      >
+                        <Lock size={12} color={isLocked ? "#38bdf8" : "#71717a"} />
+                      </div>
+                      <div 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setLines(prev => prev.map((l, idx) => idx === i ? { ...l, hidden: !l.hidden } : l));
+                        }}
+                        title={isHidden ? "Tampilkan teks di preview" : "Sembunyikan teks di preview"}
+                        style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                      >
+                        {isHidden ? <EyeOff size={12} color="#ef4444" /> : <Eye size={12} color="#a1a1aa" />}
+                      </div>
                     </div>
-                    {/* Tombol Gembok Teks */}
-                    <div 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setLines(prev => prev.map((l, idx) => idx === i ? { ...l, locked: !l.locked } : l));
-                      }}
-                      title={isLocked ? "Buka kunci trek teks" : "Kunci trek teks"}
-                      style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}
-                    >
-                      <Lock size={12} color={isLocked ? "#38bdf8" : "#71717a"} />
-                    </div>
-                    <div 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setLines(prev => prev.map((l, idx) => idx === i ? { ...l, hidden: !l.hidden } : l));
-                      }}
-                      title={isHidden ? "Tampilkan teks di preview" : "Sembunyikan teks di preview"}
-                      style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}
-                    >
-                      {isHidden ? <EyeOff size={12} color="#ef4444" /> : <Eye size={12} color="#a1a1aa" />}
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
 
-              {/* Main Media Track Header when lines exist but no visual track imported yet (Like Image 3) */}
-              {lines.length > 0 && visualTracks.length === 0 && (
-                <div style={{
-                  height: '42px',
-                  borderBottom: 'none',
-                  backgroundColor: '#111113',
-                  display: 'flex',
-                  alignItems: 'center',
-                  padding: '0 8px',
-                  gap: '8px',
-                  flexShrink: 0
-                }}>
-                  <div style={{ width: '14px', height: '14px', border: '1px solid #52525b', borderRadius: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }} title="Kolam Video Utama">
-                    <div style={{ width: 0, height: 0, borderTop: '3px solid transparent', borderBottom: '3px solid transparent', borderLeft: '4px solid #a1a1aa', marginLeft: '1px' }} />
+                {/* Main Media Track Header when lines exist but no visual track imported yet (Like Image 3) */}
+                {lines.length > 0 && visualTracks.length === 0 && (
+                  <div style={{
+                    height: '42px',
+                    borderBottom: 'none',
+                    backgroundColor: '#111113',
+                    display: 'flex',
+                    alignItems: 'center',
+                    padding: '0 8px',
+                    gap: '8px',
+                    flexShrink: 0
+                  }}>
+                    <div style={{ width: '14px', height: '14px', border: '1px solid #52525b', borderRadius: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }} title="Kolam Video Utama">
+                      <div style={{ width: 0, height: 0, borderTop: '3px solid transparent', borderBottom: '3px solid transparent', borderLeft: '4px solid #a1a1aa', marginLeft: '1px' }} />
+                    </div>
+                    <div
+                      onClick={() => setPlaceholderLocked(p => !p)}
+                      title={placeholderLocked ? "Buka kunci trek" : "Kunci trek"}
+                      style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                    >
+                      <Lock size={12} color={placeholderLocked ? "#38bdf8" : "#71717a"} />
+                    </div>
+                    <div
+                      onClick={() => setPlaceholderHidden(p => !p)}
+                      title={placeholderHidden ? "Tampilkan track di preview" : "Sembunyikan track di preview"}
+                      style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                    >
+                      {placeholderHidden ? <EyeOff size={12} color="#ef4444" /> : <Eye size={12} color="#a1a1aa" />}
+                    </div>
+                    <div
+                      onClick={() => {
+                        setPlaceholderMuted(p => {
+                          const next = !p;
+                          if (videoRef?.current) {
+                            videoRef.current.muted = next;
+                            videoRef.current.volume = next ? 0 : 1;
+                          }
+                          if (videoAudioRef?.current) {
+                            videoAudioRef.current.muted = next;
+                            videoAudioRef.current.volume = next ? 0 : 1;
+                          }
+                          return next;
+                        });
+                      }}
+                      title={placeholderMuted ? "Aktifkan suara track" : "Bisukan suara track"}
+                      style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                    >
+                      {placeholderMuted ? <VolumeX size={12} color="#ef4444" /> : <Volume2 size={12} color="#a1a1aa" />}
+                    </div>
+                    <div style={{ flex: 1 }} />
+                    <MoreHorizontal size={12} color="#a1a1aa" style={{ cursor: 'pointer' }} />
                   </div>
-                  <div
-                    onClick={() => setPlaceholderLocked(p => !p)}
-                    title={placeholderLocked ? "Buka kunci trek" : "Kunci trek"}
-                    style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}
-                  >
-                    <Lock size={12} color={placeholderLocked ? "#38bdf8" : "#71717a"} />
-                  </div>
-                  <div
-                    onClick={() => setPlaceholderHidden(p => !p)}
-                    title={placeholderHidden ? "Tampilkan track di preview" : "Sembunyikan track di preview"}
-                    style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}
-                  >
-                    {placeholderHidden ? <EyeOff size={12} color="#ef4444" /> : <Eye size={12} color="#a1a1aa" />}
-                  </div>
-                  <div
-                    onClick={() => setPlaceholderMuted(p => !p)}
-                    title={placeholderMuted ? "Aktifkan suara track" : "Bisukan suara track"}
-                    style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}
-                  >
-                    {placeholderMuted ? <VolumeX size={12} color="#ef4444" /> : <Volume2 size={12} color="#a1a1aa" />}
-                  </div>
-                  <div style={{ flex: 1 }} />
-                  <MoreHorizontal size={12} color="#a1a1aa" style={{ cursor: 'pointer' }} />
-                </div>
-              )}
+                )}
 
               {/* Video/Image/Audio/Effect track headers */}
               {tracks.map((track, trackIdx) => {
@@ -2211,6 +2318,7 @@ function TimelineTrack({ tracks, setTracks, lines, setLines, duration, currentTi
           {/* Spacer to fill remaining height */}
           <div style={{ flex: 1, backgroundColor: '#111113' }} />
         </div>
+      </div>
 
         {/* Resizer Handle (Between Left Panel and Timeline) */}
         {hasTimelineData && (
@@ -2222,7 +2330,7 @@ function TimelineTrack({ tracks, setTracks, lines, setLines, duration, currentTi
         )}
 
         {/* ── Scrollable Timeline Area ── */}
-        <div ref={scrollRef} onScroll={handleScroll} style={{ flex: 1, overflowX: 'auto', overflowY: 'auto', position: 'relative' }} onMouseDown={(e) => {
+        <div ref={scrollRef} onScroll={handleScroll} style={{ flex: 1, overflowX: 'auto', overflowY: hasVerticalOverflow ? 'auto' : 'hidden', position: 'relative' }} onMouseDown={(e) => {
           if (!e.target.closest('[data-timeline-line="true"]') && !e.target.closest('[data-track-item="true"]')) {
             setSelectedTrackItemId(null);
             setSelectedLineIdx(null);
@@ -2238,12 +2346,12 @@ function TimelineTrack({ tracks, setTracks, lines, setLines, duration, currentTi
             onChange={handleCoverPhotoUpload}
           />
 
-          <div style={{ width: `${totalPx + TIMELINE_START_OFFSET + 40}px`, minHeight: '100%', position: 'relative', display: 'flex', flexDirection: 'column', paddingBottom: '20px' }}>
+          <div style={{ width: `${totalPx + TIMELINE_START_OFFSET + 40}px`, minHeight: '100%', position: 'relative', display: 'flex', flexDirection: 'column' }}>
           
           {/* Ruler */}
-          <div ref={rulerRef} style={{ height: `20px`, position: 'sticky', top: 0, backgroundColor: '#09090b', borderBottom: '1px solid #27272a', userSelect: 'none', zIndex: 50 }}>
+          <div ref={rulerRef} style={{ height: `20px`, position: 'sticky', top: 0, backgroundColor: '#09090b', borderBottom: '1px solid #27272a', userSelect: 'none', zIndex: 120 }}>
             {/* Playhead Needle (Jarum Biru / Putih) - Starts at TIMELINE_START_OFFSET for 00:00 */}
-            <div style={{ position: 'absolute', top: 0, bottom: '-1000px', left: `${TIMELINE_START_OFFSET + (currentTime / safeDuration) * totalPx}px`, width: '1px', backgroundColor: '#38bdf8', zIndex: 70, pointerEvents: 'none' }}>
+            <div style={{ position: 'absolute', top: 0, bottom: '-1000px', left: `${TIMELINE_START_OFFSET + (currentTime / safeDuration) * totalPx}px`, width: '1px', backgroundColor: '#38bdf8', zIndex: 125, pointerEvents: 'none' }}>
               {/* Draggable Playhead Head */}
               <div 
                 onMouseDown={(e) => {
@@ -2274,6 +2382,7 @@ function TimelineTrack({ tracks, setTracks, lines, setLines, duration, currentTi
                   fontWeight: 700,
                   color: hasTimelineData ? '#ffffff' : '#71717a',
                   userSelect: 'none',
+                  zIndex: 130,
                   transition: 'box-shadow 0.15s, transform 0.1s'
                 }}
               >
@@ -2306,7 +2415,7 @@ function TimelineTrack({ tracks, setTracks, lines, setLines, duration, currentTi
                 width: '2px',
                 backgroundColor: '#00d8b6',
                 boxShadow: '0 0 8px #00d8b6',
-                zIndex: 80,
+                zIndex: 125,
                 pointerEvents: 'none'
               }}>
                 <div style={{
@@ -2762,6 +2871,7 @@ function TimelineTrack({ tracks, setTracks, lines, setLines, duration, currentTi
               {tracks.map((track, trackIdx) => {
                 const isFirstAudio = track.type === 'audio' && trackIdx === tracks.findIndex(t => t.type === 'audio');
                 const isMainVisualTrack = track.isMainMedia || (visualTracks.length > 0 && track.id === visualTracks[visualTracks.length - 1]?.id);
+                const showCoverOnTrack = isMainVisualTrack || (lines.length === 0 && visualTracks.length === 0 && isFirstAudio);
                 return (
                   <Fragment key={track.id}>
                     {newTrackDropZone === 'bottom_visual' && isFirstAudio && (
@@ -2817,8 +2927,8 @@ function TimelineTrack({ tracks, setTracks, lines, setLines, duration, currentTi
                     transition: 'background-color 0.15s, outline 0.15s'
                   }}>
                   
-                  {/* Cover Button on Main Visual Track (Solid dark #262629, no border lines, zero horizontal flow displacement) */}
-                  {isMainVisualTrack && (
+                  {/* Cover Button on Main Visual Track or First Audio Track (Solid dark #262629, no border lines, zero horizontal flow displacement) */}
+                  {showCoverOnTrack && (
                     <div
                       onClick={(e) => { e.stopPropagation(); coverFileInputRef.current?.click(); }}
                       title="Klik untuk memasukkan foto cover"
@@ -3648,13 +3758,14 @@ function StemMixer({ stems, setStems }) {
   );
 }
 
-const applyAudioProperties = (el, t, isActive, currentTime, item) => {
+const applyAudioProperties = (el, t, isActive, currentTime, item, isMuted = false) => {
   if (!el || !el.play) return;
   if (item?.isEffect) {
     el.muted = true;
     return;
   }
-  el.muted = false;
+  const muted = Boolean(isMuted);
+  el.muted = muted;
   try {
     if (!window.__shotaiAudioContext && (window.AudioContext || window.webkitAudioContext)) {
       const AudioCtx = window.AudioContext || window.webkitAudioContext;
@@ -3682,7 +3793,7 @@ const applyAudioProperties = (el, t, isActive, currentTime, item) => {
     }
 
     const db = typeof t.volume !== 'undefined' ? t.volume : 0;
-    const baseGain = Math.pow(10, db / 20);
+    const baseGain = muted ? 0 : Math.pow(10, db / 20);
 
     let fadeMultiplier = 1.0;
     if (isActive) {
@@ -3699,16 +3810,14 @@ const applyAudioProperties = (el, t, isActive, currentTime, item) => {
         fadeMultiplier = Math.max(0, Math.min(1, fadeMultiplier));
     }
 
-    const finalGain = baseGain * fadeMultiplier;
+    const finalGain = muted ? 0 : baseGain * fadeMultiplier;
     if (el.__gainNode) {
       el.__gainNode.gain.value = finalGain;
     }
-    if (!el.__sourceNode) {
-      el.volume = Math.max(0, Math.min(1, finalGain));
-    }
+    el.volume = muted ? 0 : Math.max(0, Math.min(1, finalGain));
   } catch (err) {
     const db = typeof t.volume !== 'undefined' ? t.volume : 0;
-    const baseGain = Math.min(1, Math.max(0, Math.pow(10, db / 20))); 
+    const baseGain = muted ? 0 : Math.min(1, Math.max(0, Math.pow(10, db / 20))); 
     
     let fadeMultiplier = 1.0;
     if (isActive) {
@@ -3724,7 +3833,7 @@ const applyAudioProperties = (el, t, isActive, currentTime, item) => {
         }
         fadeMultiplier = Math.max(0, Math.min(1, fadeMultiplier));
     }
-    el.volume = baseGain * fadeMultiplier;
+    el.volume = muted ? 0 : baseGain * fadeMultiplier;
   }
   
   const newSpeed = typeof t.speed !== 'undefined' ? t.speed : 1;
@@ -3749,10 +3858,9 @@ function MultiTrackAudioEngine({ tracks, currentTime, isPlaying, isLooping }) {
         
         const t = item.transform || {};
         const isActive = currentTime >= item.start && currentTime <= item.end;
-        
-        applyAudioProperties(el, t, isActive, currentTime, item);
-
         const isMuted = Boolean(track.mutedAudio);
+        
+        applyAudioProperties(el, t, isActive, currentTime, item, isMuted);
         if (el) el.muted = isMuted;
 
         if (isActive) {
@@ -4238,7 +4346,9 @@ function KaraokePreview({
           el.loop = true;
           window.__shotaiActiveAudioElements?.delete(el);
         } else {
-          applyAudioProperties(el, t, isActive, currentTime, item);
+          const isMuted = Boolean(track.mutedAudio);
+          applyAudioProperties(el, t, isActive, currentTime, item, isMuted);
+          el.muted = isMuted;
         }
 
         if (isActive) {
@@ -6187,9 +6297,11 @@ export default function VideoKaraoke({ onBack }) {
         vid.src = activeTimelineVisualItem.url;
       }
       // Check if video audio track is muted
-      const isVideoTrackMuted = tracks.some(t => t.type === 'video' && t.mutedAudio);
+      const parentTrack = tracks.find(t => (t.items || []).some(it => it.id === activeTimelineVisualItem.id));
+      const isVideoTrackMuted = parentTrack ? Boolean(parentTrack.mutedAudio) : tracks.some(t => t.type === 'video' && t.mutedAudio);
+      vid.muted = Boolean(isVideoTrackMuted);
+      vid.volume = isVideoTrackMuted ? 0 : 1;
       if (isPlaying) {
-        vid.muted = Boolean(isVideoTrackMuted);
         if (Math.abs(vid.currentTime - clipTime) > 0.15) {
           vid.currentTime = clipTime;
         }
@@ -6203,7 +6315,24 @@ export default function VideoKaraoke({ onBack }) {
     } else {
       if (!vid.paused) vid.pause();
     }
-  }, [isPlaying, actualHoveredMediaUrl, activeTimelineVisualItem, currentTime]);
+  }, [isPlaying, actualHoveredMediaUrl, activeTimelineVisualItem, currentTime, tracks]);
+
+  // Immediately sync mute state of videoRef and videoAudioRef when tracks change
+  useEffect(() => {
+    const vid = videoRef.current;
+    if (vid) {
+      const parentTrack = activeTimelineVisualItem ? tracks.find(t => (t.items || []).some(it => it.id === activeTimelineVisualItem.id)) : null;
+      const isVideoMuted = parentTrack ? Boolean(parentTrack.mutedAudio) : tracks.some(t => t.type === 'video' && t.mutedAudio);
+      vid.muted = isVideoMuted;
+      vid.volume = isVideoMuted ? 0 : 1;
+    }
+    const vidAudio = videoAudioRef.current;
+    if (vidAudio) {
+      const isVideoMuted = tracks.some(t => t.type === 'video' && t.mutedAudio);
+      vidAudio.muted = isVideoMuted;
+      vidAudio.volume = isVideoMuted ? 0 : 1;
+    }
+  }, [tracks, activeTimelineVisualItem]);
 
   // Sync scrubbing or jumps to videoRef when timeline is active
   useEffect(() => {
@@ -8227,7 +8356,7 @@ STRICT ALIGNMENT RULES:
                 <div style={{ display: 'flex', flexDirection: 'row', height: '100%', margin: '-10px', backgroundColor: '#18181b' }}>
                   
                   {/* Left Column - Menu Kategori Efek */}
-                  <div style={{ width: '36%', borderRight: '1px solid #27272a', padding: '10px 6px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <div style={{ width: '36%', borderRight: '1px solid #27272a', padding: '10px 6px', display: 'flex', flexDirection: 'column', gap: '4px', overflowY: 'auto', scrollbarColor: '#3f3f46 #18181b', scrollbarWidth: 'thin' }}>
                     <div style={{ padding: '4px 8px', fontSize: '10px', fontWeight: 700, color: '#71717a', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                       Kategori
                     </div>
@@ -8267,7 +8396,7 @@ STRICT ALIGNMENT RULES:
                   </div>
 
                   {/* Right Column - Grid Kartu Efek */}
-                  <div style={{ width: '64%', padding: '10px', backgroundColor: '#111113', display: 'flex', flexDirection: 'column', gap: '8px', overflowY: 'auto' }}>
+                  <div style={{ width: '64%', padding: '10px', backgroundColor: '#111113', display: 'flex', flexDirection: 'column', gap: '8px', overflowY: 'auto', scrollbarColor: '#3f3f46 #111113', scrollbarWidth: 'thin' }}>
                     
                     {/* Search Input */}
                     <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
@@ -9981,6 +10110,8 @@ STRICT ALIGNMENT RULES:
                 setIsPlaying={setIsPlaying}
                 setAudioUrl={setAudioUrl}
                 audioRef={audioRef}
+                videoRef={videoRef}
+                videoAudioRef={videoAudioRef}
                 stopMediaBinPreview={stopMediaBinPreview}
                 clipboardItem={clipboardItem}
                 setClipboardItem={setClipboardItem}
@@ -10000,9 +10131,12 @@ STRICT ALIGNMENT RULES:
       <style>{`
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         @keyframes floatUp { 0% { transform: translateY(0); opacity: 0.15; } 100% { transform: translateY(-200px); opacity: 0; } }
-        ::-webkit-scrollbar { width: 4px; height: 4px; }
-        ::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 3px; }
-        ::-webkit-scrollbar-track { background: transparent; }
+        * { scrollbar-width: thin; scrollbar-color: #3f3f46 #111113; }
+        ::-webkit-scrollbar, *::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-thumb, *::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover, *::-webkit-scrollbar-thumb:hover { background: #52525b; }
+        ::-webkit-scrollbar-track, *::-webkit-scrollbar-track { background: #111113; }
+        ::-webkit-scrollbar-corner, *::-webkit-scrollbar-corner { background: #111113; }
       `}</style>
 
       {/* ═══ EXPORT MODAL DIALOG ═══════════════════════════════════════════ */}
