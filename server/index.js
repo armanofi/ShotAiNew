@@ -7,6 +7,7 @@ const crypto = require('crypto');
 const connectDB = require('./db');
 const License = require('./models/License');
 const User = require('./models/User');
+const Order = require('./models/Order');
 
 const GOOGLE_CLIENT_ID = '677784266542-sbtufl9691u1aliv8poqo399hjo6282p.apps.googleusercontent.com';
 
@@ -99,6 +100,103 @@ const requireSuperadmin = (req, res, next) => {
 
 // 1. Landing Page
 app.get('/', (req, res) => {
+  let currentUser = null;
+  if (req.cookies && req.cookies.admin_token) {
+    try {
+      currentUser = jwt.verify(req.cookies.admin_token, JWT_SECRET);
+    } catch (e) {
+      res.clearCookie('admin_token');
+    }
+  }
+
+  let userNavHtml = '';
+  let mobileUserNavHtml = '';
+
+  if (currentUser) {
+    const initial = (currentUser.name || currentUser.email || 'U').charAt(0).toUpperCase();
+    userNavHtml = `
+      <div class="relative flex items-center gap-2.5">
+        <!-- Theme Button -->
+        <button type="button" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#18181b] border border-[#27272a] text-gray-300 text-xs font-semibold hover:border-gray-500 transition shadow-sm">
+          <span>☾</span>
+          <span>Gelap</span>
+        </button>
+
+        <!-- Profile Pill Button (Circled in Red in User Screenshot) -->
+        <button id="userProfileBtn" onclick="toggleUserDropdown(event)" class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#18181b] border border-[#27272a] hover:border-indigo-500/70 text-white transition focus:outline-none cursor-pointer shadow-sm group">
+          <div class="w-6 h-6 rounded-full bg-[#543b2b] border border-[#78523c] text-amber-100 flex items-center justify-center font-bold text-xs">
+            ${initial}
+          </div>
+          <span class="text-xs font-medium text-gray-200 max-w-[160px] truncate">${currentUser.email}</span>
+          <svg id="profileChevron" class="w-3.5 h-3.5 text-gray-400 group-hover:text-white transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+          </svg>
+        </button>
+
+        <!-- Dropdown Card -->
+        <div id="userDropdown" class="hidden absolute right-0 top-12 w-64 rounded-2xl bg-[#18181b] border border-[#27272a] shadow-2xl p-3 z-50 transition-all">
+          <div class="px-2 py-1.5">
+            <p class="text-[10px] font-extrabold uppercase tracking-wider text-purple-400 mb-0.5">AKUN SAYA</p>
+            <p class="text-xs font-bold text-white truncate">${currentUser.email}</p>
+          </div>
+          <div class="border-t border-[#27272a] my-2"></div>
+          <div class="space-y-1">
+            <a href="/dashboard" class="flex items-center gap-3 px-2.5 py-2 rounded-xl hover:bg-white/5 transition group text-left">
+              <div class="w-8 h-8 rounded-lg bg-indigo-950/80 border border-indigo-800/60 flex items-center justify-center text-sm text-indigo-300 flex-shrink-0">
+                📊
+              </div>
+              <div>
+                <div class="text-xs font-bold text-white group-hover:text-indigo-300">Dashboard Saya</div>
+                <div class="text-[10px] text-gray-400">Pesanan, hasil & lisensi</div>
+              </div>
+            </a>
+            ${currentUser.role === 'superadmin' ? `
+            <a href="/admin" class="flex items-center gap-3 px-2.5 py-2 rounded-xl hover:bg-white/5 transition group text-left">
+              <div class="w-8 h-8 rounded-lg bg-purple-950/80 border border-purple-800/60 flex items-center justify-center text-sm text-purple-300 flex-shrink-0">
+                👑
+              </div>
+              <div>
+                <div class="text-xs font-bold text-white group-hover:text-purple-300">Dashboard Superadmin</div>
+                <div class="text-[10px] text-gray-400">Kelola semua lisensi & user</div>
+              </div>
+            </a>` : ''}
+          </div>
+          <div class="border-t border-[#27272a] my-2"></div>
+          <a href="/logout" class="flex items-center gap-3 px-2.5 py-1.5 rounded-xl hover:bg-red-950/40 text-left group transition">
+            <div class="w-8 h-8 rounded-lg bg-red-950/60 border border-red-800/60 flex items-center justify-center text-sm text-red-400 flex-shrink-0">
+              ↩️
+            </div>
+            <div>
+              <div class="text-xs font-bold text-red-400">Logout</div>
+              <div class="text-[10px] text-gray-500">Keluar dari akun ini</div>
+            </div>
+          </a>
+        </div>
+      </div>
+    `;
+
+    mobileUserNavHtml = `
+      <div class="pt-3 border-t border-[#27272a] space-y-2">
+        <div class="flex items-center gap-2 px-1 py-1">
+          <div class="w-6 h-6 rounded-full bg-[#543b2b] text-amber-100 flex items-center justify-center font-bold text-xs">
+            ${initial}
+          </div>
+          <span class="text-xs font-semibold text-gray-300 truncate">${currentUser.email}</span>
+        </div>
+        <a href="/dashboard" class="block text-center w-full bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300 border border-indigo-500/40 font-semibold text-xs py-2 rounded-lg transition" onclick="closeMobileMenu()">📊 Dashboard Saya</a>
+        ${currentUser.role === 'superadmin' ? '<a href="/admin" class="block text-center w-full bg-purple-600/30 hover:bg-purple-600/50 text-purple-300 border border-purple-500/40 font-semibold text-xs py-2 rounded-lg transition" onclick="closeMobileMenu()">👑 Dashboard Superadmin</a>' : ''}
+        <a href="/logout" class="block text-center w-full bg-red-950/40 text-red-400 border border-red-800/40 font-semibold text-xs py-2 rounded-lg transition" onclick="closeMobileMenu()">Logout</a>
+      </div>
+    `;
+  } else {
+    userNavHtml = `
+      <a href="/login" class="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white px-5 py-2 rounded-full transition shadow-lg shadow-indigo-600/30 font-semibold text-xs active:scale-95">Masuk</a>
+    `;
+    mobileUserNavHtml = `
+      <a href="/login" class="block text-center w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs py-2.5 rounded-lg transition" onclick="closeMobileMenu()">Masuk ke Portal</a>
+    `;
+  }
+
   const html = `
     <!DOCTYPE html>
     <html lang="id" class="scroll-smooth">
@@ -142,7 +240,7 @@ app.get('/', (req, res) => {
                     <a href="#keunggulan" class="hover:text-white hover:text-indigo-400 transition-colors">Keunggulan</a>
                     <a href="#tutorial" class="hover:text-white hover:text-indigo-400 transition-colors">Tutorial</a>
                     <a href="#toko" class="hover:text-white hover:text-indigo-400 transition-colors">Toko</a>
-                    <a href="/login" class="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white px-5 py-2 rounded-full transition shadow-lg shadow-indigo-600/30 font-semibold text-xs active:scale-95">Masuk</a>
+                    ${userNavHtml}
                 </nav>
 
                 <!-- Mobile Menu Button -->
@@ -160,7 +258,7 @@ app.get('/', (req, res) => {
                 <a href="#keunggulan" class="block text-sm font-medium text-gray-300 hover:text-indigo-400 py-1" onclick="closeMobileMenu()">Keunggulan</a>
                 <a href="#tutorial" class="block text-sm font-medium text-gray-300 hover:text-indigo-400 py-1" onclick="closeMobileMenu()">Tutorial</a>
                 <a href="#toko" class="block text-sm font-medium text-gray-300 hover:text-indigo-400 py-1" onclick="closeMobileMenu()">Toko</a>
-                <a href="/login" class="block text-center w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs py-2.5 rounded-lg transition" onclick="closeMobileMenu()">Masuk ke Portal</a>
+                ${mobileUserNavHtml}
             </div>
         </header>
 
@@ -594,9 +692,9 @@ app.get('/', (req, res) => {
                             <li class="flex items-center gap-2"><span class="text-indigo-400 font-bold">✓</span> AI Video Karaoke Sync</li>
                         </ul>
                     </div>
-                    <a href="https://wa.me/6285261475052?text=Halo%20Admin,%20saya%20ingin%20membeli%20Lisensi%20ShotAi%20Paket%201%20Bulan" target="_blank" class="w-full text-center bg-[#18181b] hover:bg-[#27272a] text-white border border-[#27272a] hover:border-indigo-500 font-bold py-2.5 px-4 rounded-xl text-xs transition">
+                    <button onclick="orderPackage('1 Bulan', 'Rp 49.000')" class="w-full text-center bg-[#18181b] hover:bg-[#27272a] text-white border border-[#27272a] hover:border-indigo-500 font-bold py-2.5 px-4 rounded-xl text-xs transition cursor-pointer">
                         Pesan via WhatsApp
-                    </a>
+                    </button>
                 </div>
 
                 <!-- Package 2: 1 Tahun (Popular) -->
@@ -621,9 +719,9 @@ app.get('/', (req, res) => {
                             <li class="flex items-center gap-2"><span class="text-emerald-400 font-bold">✓</span> Prioritas update & support VIP</li>
                         </ul>
                     </div>
-                    <a href="https://wa.me/6285261475052?text=Halo%20Admin,%20saya%20ingin%20membeli%20Lisensi%20ShotAi%20Paket%201%20Tahun" target="_blank" class="w-full text-center bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition shadow-lg shadow-indigo-600/30">
+                    <button onclick="orderPackage('1 Tahun', 'Rp 249.000')" class="w-full text-center bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition shadow-lg shadow-indigo-600/30 cursor-pointer">
                         Pesan Paket 1 Tahun
-                    </a>
+                    </button>
                 </div>
 
                 <!-- Package 3: Lifetime -->
@@ -645,9 +743,9 @@ app.get('/', (req, res) => {
                             <li class="flex items-center gap-2"><span class="text-purple-400 font-bold">✓</span> Bantuan teknis langsung WhatsApp</li>
                         </ul>
                     </div>
-                    <a href="https://wa.me/6285261475052?text=Halo%20Admin,%20saya%20ingin%20membeli%20Lisensi%20ShotAi%20Paket%20Lifetime" target="_blank" class="w-full text-center bg-[#18181b] hover:bg-[#27272a] text-white border border-[#27272a] hover:border-purple-500 font-bold py-2.5 px-4 rounded-xl text-xs transition">
+                    <button onclick="orderPackage('Lifetime', 'Rp 499.000')" class="w-full text-center bg-[#18181b] hover:bg-[#27272a] text-white border border-[#27272a] hover:border-purple-500 font-bold py-2.5 px-4 rounded-xl text-xs transition cursor-pointer">
                         Dapatkan Akses Lifetime
-                    </a>
+                    </button>
                 </div>
             </div>
         </section>
@@ -709,6 +807,53 @@ app.get('/', (req, res) => {
                     if (icon) icon.textContent = '+';
                 }
             }
+
+            // User Profile Dropdown Toggle
+            function toggleUserDropdown(event) {
+                if (event) event.stopPropagation();
+                const dd = document.getElementById('userDropdown');
+                const chevron = document.getElementById('profileChevron');
+                if (dd) {
+                    const isHidden = dd.classList.contains('hidden');
+                    if (isHidden) {
+                        dd.classList.remove('hidden');
+                        if (chevron) chevron.classList.add('rotate-180');
+                    } else {
+                        dd.classList.add('hidden');
+                        if (chevron) chevron.classList.remove('rotate-180');
+                    }
+                }
+            }
+
+            // Close Dropdown when clicking outside
+            window.addEventListener('click', (e) => {
+                const dd = document.getElementById('userDropdown');
+                const btn = document.getElementById('userProfileBtn');
+                const chevron = document.getElementById('profileChevron');
+                if (dd && !dd.classList.contains('hidden')) {
+                    if (!btn || (!btn.contains(e.target) && !dd.contains(e.target))) {
+                        dd.classList.add('hidden');
+                        if (chevron) chevron.classList.remove('rotate-180');
+                    }
+                }
+            });
+
+            // Order Package helper from Toko
+            async function orderPackage(pkgName, price) {
+                try {
+                    const res = await fetch('/api/create-order', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ product_name: 'PAKET LISENSI SHOTAI - ' + pkgName, package_type: pkgName, price: price })
+                    });
+                    const data = await res.json();
+                    const orderNum = (data && data.success && data.order_number) ? data.order_number : '';
+                    const textMsg = encodeURIComponent('Halo Admin, saya ingin memesan Lisensi ShotAi ' + pkgName + ' (' + price + ')' + (orderNum ? ' dengan No. Pesanan: ' + orderNum : ''));
+                    window.open('https://wa.me/6285261475052?text=' + textMsg, '_blank');
+                } catch (e) {
+                    window.open('https://wa.me/6285261475052?text=' + encodeURIComponent('Halo Admin, saya ingin memesan Lisensi ShotAi ' + pkgName + ' (' + price + ')'), '_blank');
+                }
+            }
         </script>
     </body>
     </html>
@@ -718,11 +863,11 @@ app.get('/', (req, res) => {
 
 // 2. Login Page
 app.get('/login', (req, res) => {
-  // If already logged in, redirect based on role
+  // If already logged in, redirect to home
   if (req.cookies.admin_token) {
     try {
-      const decoded = jwt.verify(req.cookies.admin_token, JWT_SECRET);
-      return res.redirect(decoded.role === 'superadmin' ? '/admin' : '/dashboard');
+      jwt.verify(req.cookies.admin_token, JWT_SECRET);
+      return res.redirect('/');
     } catch(e) {
       res.clearCookie('admin_token');
     }
@@ -878,8 +1023,8 @@ app.post('/api/login', async (req, res) => {
       maxAge: 24 * 60 * 60 * 1000 // 1 day
     });
 
-    // Role-based redirect
-    const redirect = user.role === 'superadmin' ? '/admin' : '/';
+    // Redirect to main web beranda initially
+    const redirect = '/';
     res.json({ success: true, message: 'Berhasil login', redirect });
   } catch (err) {
     console.error('Login error:', err.message);
@@ -999,7 +1144,8 @@ app.post('/api/google-login', async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
     });
 
-    const redirect = isSuperadmin ? '/admin' : '/dashboard';
+    // All users initially land on the main web beranda
+    const redirect = '/';
 
     res.json({
       success: true,
@@ -1493,6 +1639,38 @@ app.post('/api/admin/license/:id/delete', requireSuperadmin, async (req, res) =>
   }
 });
 
+// 6d. Create Order API (records order from Toko or checkout)
+app.post('/api/create-order', async (req, res) => {
+  try {
+    await connectDB();
+    let userEmail = 'guest@shotai.app';
+    if (req.cookies && req.cookies.admin_token) {
+      try {
+        const decoded = jwt.verify(req.cookies.admin_token, JWT_SECRET);
+        userEmail = decoded.email.toLowerCase();
+      } catch (e) {}
+    }
+
+    const { product_name, package_type, price } = req.body;
+    const rand = Math.random().toString(36).substring(2, 7).toUpperCase();
+    const orderNum = `AKA - WEB-${(package_type || 'PREMIUM').toUpperCase().replace(/\s+/g, '-')}-${Date.now().toString().slice(-8)}-${rand}`;
+
+    const newOrder = await Order.create({
+      order_number: orderNum,
+      user_email: userEmail,
+      product_name: product_name || `BUNDLING LISENSI PREMIUM APP (${package_type || '1 TAHUN'})`,
+      package_type: package_type || '1 Tahun',
+      price: price || 'Rp 100.000',
+      status: 'Pending',
+      notes: 'Pesanan baru via Toko Web'
+    });
+
+    res.json({ success: true, order_number: newOrder.order_number, order: newOrder });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Gagal membuat pesanan: ' + err.message });
+  }
+});
+
 // === 7. DASHBOARD PELANGGAN (Protected - For Customers) ===
 app.get('/dashboard', requireAuth, async (req, res) => {
   try {
@@ -1500,40 +1678,128 @@ app.get('/dashboard', requireAuth, async (req, res) => {
     const userEmail = req.user.email ? req.user.email.toLowerCase() : '';
     const myLicenses = await License.find({ owner_email: userEmail }).sort({ createdAt: -1 });
 
+    // Auto-seed orders from existing licenses if user has licenses
+    for (const lic of myLicenses) {
+      const existingOrder = await Order.findOne({ license_code: lic.code });
+      if (!existingOrder) {
+        const isBundling = lic.duration === '1 Tahun' || lic.type === 'premium';
+        const prodName = isBundling
+          ? 'BUNDLING LISENSI PREMIUM APP 1 TAHUN + GEMINI PRO 18 BULAN'
+          : `PAKET LISENSI ${lic.type.toUpperCase()} APP (${lic.duration || '1 BULAN'})`;
+        const priceMap = {
+          '7 Hari': 'Rp 0 (Trial)',
+          '1 Bulan': 'Rp 49.000',
+          '3 Bulan': 'Rp 129.000',
+          '6 Bulan': 'Rp 199.000',
+          '1 Tahun': 'Rp 100.000',
+          'Selamanya': 'Rp 499.000'
+        };
+        const orderNumber = `AKA - WEB-BUNDLING-PREMIUM-${(lic.duration || '1-TAHUN').toUpperCase().replace(/\s+/g, '-')}-${Date.now().toString().slice(-8)}-C${Math.floor(10000 + Math.random()*90000)}`;
+        await Order.create({
+          order_number: orderNumber,
+          user_email: userEmail,
+          product_name: prodName,
+          package_type: lic.duration || '1 Tahun',
+          price: priceMap[lic.duration] || 'Rp 100.000',
+          status: 'Selesai',
+          license_code: lic.code,
+          notes: 'Pesanan terhubung dari lisensi aktif'
+        });
+      }
+    }
+
+    const myOrders = await Order.find({ user_email: userEmail }).sort({ createdAt: -1 });
+
+    const activeLicensesCount = myLicenses.filter(l => l.status === 'active' && (!l.expires_at || new Date() <= new Date(l.expires_at))).length;
+    const pendingOrdersCount = myOrders.filter(o => o.status === 'Pending').length;
+    const completedOrdersCount = myOrders.filter(o => o.status === 'Selesai').length;
+
     const formatDate = (d) => {
       if (!d) return '-';
-      return new Date(d).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+      const date = new Date(d);
+      return date.toLocaleDateString('id-ID') + ', ' + date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     };
 
+    const formatSimpleDate = (d) => {
+      if (!d) return '-';
+      return new Date(d).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+    };
+
+    // Construct Orders HTML (matching screenshot green tinted cards)
+    let ordersHtml = '';
+    if (myOrders.length > 0) {
+      myOrders.forEach(ord => {
+        const isSelesai = ord.status === 'Selesai';
+        ordersHtml += `
+          <div class="order-card bg-[#ecfdf5] border border-[#a7f3d0] rounded-xl p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 hover:shadow-md transition duration-200" data-status="${ord.status.toLowerCase()}">
+            <div class="flex-1">
+              <div class="flex items-center gap-2 flex-wrap mb-1.5">
+                <span class="font-extrabold text-xs md:text-sm text-gray-900 uppercase tracking-tight">${ord.product_name}</span>
+                <span class="bg-gray-200 text-gray-700 text-[10px] font-bold px-2.5 py-0.5 rounded-full">${ord.package_type || '1 TAHUN'}</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="font-mono text-xs text-gray-600 select-all font-semibold tracking-wide">${ord.license_code || ord.order_number}</span>
+                <button onclick="copyCode('${ord.license_code || ord.order_number}')" title="Salin Kode" class="text-gray-400 hover:text-gray-800 transition p-1">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                </button>
+              </div>
+            </div>
+            <div class="text-left md:text-right flex-shrink-0">
+              <div class="text-sm md:text-base font-black text-gray-900">${ord.price}</div>
+              <div class="flex items-center md:justify-end gap-1.5 mt-0.5">
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${isSelesai ? 'text-emerald-700 bg-emerald-100 border border-emerald-200' : 'text-amber-700 bg-amber-100 border border-amber-200'}">
+                  ${ord.status}
+                </span>
+                <span class="text-gray-400 font-bold text-xs">›</span>
+              </div>
+              <div class="text-[10px] text-gray-500 mt-1">${formatDate(ord.createdAt)}</div>
+            </div>
+          </div>
+        `;
+      });
+    } else {
+      ordersHtml = `
+        <div class="border border-dashed border-gray-300 rounded-xl p-8 text-center bg-gray-50/50">
+          <div class="text-3xl mb-2">📦</div>
+          <h4 class="text-sm font-bold text-gray-800 mb-1">Belum Ada Riwayat Pesanan</h4>
+          <p class="text-xs text-gray-500 max-w-sm mx-auto mb-4">Anda belum melakukan pemesanan paket lisensi. Pilih paket yang sesuai di toko kami.</p>
+          <a href="/#toko" class="inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-4 py-2 rounded-lg transition shadow">
+            <span>🛒</span> Beli Lisensi di Toko
+          </a>
+        </div>
+      `;
+    }
+
+    // Construct Licenses HTML
     let licenseCardsHtml = '';
     if (myLicenses.length > 0) {
       myLicenses.forEach(lic => {
         const isExpired = lic.expires_at && new Date() > new Date(lic.expires_at);
         licenseCardsHtml += `
-          <div class="bg-[#18181b] border border-[#27272a] rounded-xl p-5 shadow-lg relative overflow-hidden">
+          <div class="bg-gray-50 border border-gray-200 rounded-xl p-5 shadow-sm relative overflow-hidden">
             <div class="flex items-center justify-between mb-3">
-              <span class="${lic.type === 'premium' ? 'bg-purple-950/80 text-purple-300 border border-purple-800/80' : 'bg-blue-950/80 text-blue-300 border border-blue-800/80'} font-bold py-1 px-3 rounded-full text-xs">
-                ${lic.type === 'premium' ? '⭐ PREMIUM LICENSE' : 'FREE LICENSE'}
+              <span class="${lic.type === 'premium' ? 'bg-purple-100 text-purple-700 border border-purple-200' : 'bg-blue-100 text-blue-700 border border-blue-200'} font-bold py-0.5 px-3 rounded-full text-xs">
+                ${lic.type === 'premium' ? '⭐ PREMIUM' : 'FREE'}
               </span>
-              <span class="${isExpired ? 'text-red-400 bg-red-950/50 border border-red-900/50' : 'text-emerald-400 bg-emerald-950/50 border border-emerald-900/50'} text-xs font-semibold px-2.5 py-0.5 rounded-full">
+              <span class="${isExpired ? 'text-red-700 bg-red-100 border border-red-200' : 'text-emerald-700 bg-emerald-100 border border-emerald-200'} text-xs font-semibold px-2.5 py-0.5 rounded-full">
                 ${isExpired ? 'Kadaluarsa' : (lic.status === 'active' ? 'Aktif' : 'Nonaktif')}
               </span>
             </div>
             <div class="mb-4">
-              <label class="block text-[10px] text-gray-400 uppercase font-semibold mb-1">Kode Lisensi Anda</label>
+              <label class="block text-[10px] text-gray-500 uppercase font-semibold mb-1">Kode Lisensi</label>
               <div class="flex items-center gap-2">
-                <span class="font-mono text-base font-bold text-indigo-300 bg-[#09090b] px-3 py-1.5 rounded-lg border border-[#27272a] flex-1 select-all tracking-wider">${lic.code}</span>
-                <button onclick="copyCode('${lic.code}')" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-3 py-2 rounded-lg transition shadow">Salin</button>
+                <span class="font-mono text-sm font-bold text-indigo-700 bg-white px-3 py-1.5 rounded-lg border border-gray-300 flex-1 select-all tracking-wider">${lic.code}</span>
+                <button onclick="copyCode('${lic.code}')" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition shadow">Salin</button>
               </div>
             </div>
-            <div class="text-xs text-gray-400 space-y-1 border-t border-[#27272a] pt-3">
+            <div class="text-xs text-gray-500 space-y-1 border-t border-gray-200 pt-3">
               <div class="flex justify-between">
                 <span>Masa Aktif:</span>
-                <span class="text-white font-medium">${lic.duration || 'Aktif'}</span>
+                <span class="text-gray-900 font-semibold">${lic.duration || 'Aktif'}</span>
               </div>
               <div class="flex justify-between">
                 <span>Berlaku Sampai:</span>
-                <span class="text-white font-medium">${lic.expires_at ? formatDate(lic.expires_at) : 'Selamanya / Lifetime'}</span>
+                <span class="text-gray-900 font-semibold">${lic.expires_at ? formatSimpleDate(lic.expires_at) : 'Selamanya / Lifetime'}</span>
               </div>
             </div>
           </div>
@@ -1541,93 +1807,171 @@ app.get('/dashboard', requireAuth, async (req, res) => {
       });
     } else {
       licenseCardsHtml = `
-        <div class="bg-[#18181b] border border-dashed border-[#3f3f46] rounded-xl p-8 text-center">
+        <div class="col-span-2 border border-dashed border-gray-300 rounded-xl p-8 text-center bg-gray-50/50">
           <div class="text-3xl mb-2">🔑</div>
-          <h3 class="text-sm font-bold text-white mb-1">Belum Ada Lisensi Tertaut</h3>
-          <p class="text-xs text-gray-400 max-w-sm mx-auto mb-4">Email ini belum memiliki lisensi terdaftar. Jika Anda sudah membeli lisensi, masukkan kode di bawah ini untuk menautkannya ke akun Anda.</p>
-          <form id="claimForm" class="flex max-w-md mx-auto gap-2">
-            <input type="text" id="claimCode" placeholder="Masukkan kode lisensi..." class="flex-1 p-2 bg-[#09090b] text-white border border-[#27272a] rounded-lg text-xs font-mono uppercase focus:outline-none focus:ring-1 focus:ring-indigo-500">
-            <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-4 py-2 rounded-lg transition">Tautkan</button>
-          </form>
+          <h4 class="text-sm font-bold text-gray-800 mb-1">Belum Ada Lisensi Tertaut</h4>
+          <p class="text-xs text-gray-500 max-w-sm mx-auto mb-4">Email ini belum memiliki lisensi yang aktif. Tautkan kode lisensi Anda di bawah ini.</p>
         </div>
       `;
     }
 
     const html = `
       <!DOCTYPE html>
-      <html lang="en">
+      <html lang="id">
       <head>
           <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Dashboard Pelanggan - ShotAi</title>
+          <title>Dashboard Saya - ShotAi</title>
           <script src="https://cdn.tailwindcss.com"></script>
-          <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-          <style>body { font-family: 'Inter', sans-serif; background-color: #09090b; color: #f1f5f9; min-height: 100vh; }</style>
+          <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+          <style>
+            body { font-family: 'Inter', sans-serif; background-color: #09090b; color: #18181b; min-height: 100vh; }
+          </style>
       </head>
-      <body class="bg-[#09090b] text-[#f1f5f9]">
-          <div class="min-h-screen p-6 md:p-10 bg-[#09090b]">
-              <div class="max-w-4xl mx-auto space-y-6">
-                  <!-- Header -->
-                  <div class="bg-[#111113] border border-[#27272a] rounded-2xl p-6 flex flex-wrap justify-between items-center gap-4 shadow-xl">
-                      <div class="flex items-center gap-3.5">
-                        <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-purple-900/40 flex-shrink-0">
-                          <span class="text-white font-black text-lg">SA</span>
-                        </div>
-                        <div>
-                          <div class="flex items-center gap-2">
-                            <h1 class="text-lg font-bold text-white">Dashboard Pelanggan</h1>
-                            <span class="bg-emerald-950/80 text-emerald-300 border border-emerald-800/80 text-[10px] font-semibold px-2 py-0.5 rounded-full">Pelanggan</span>
-                          </div>
-                          <p class="text-gray-400 text-xs mt-0.5">${req.user.email}</p>
-                        </div>
-                      </div>
-                      <div class="flex items-center gap-3">
-                        ${req.user.role === 'superadmin' ? '<a href="/admin" class="bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300 border border-indigo-500/40 text-xs font-semibold py-2 px-3 rounded-lg transition">👑 Ke Dashboard Superadmin</a>' : ''}
-                        <a href="/logout" class="bg-white/10 hover:bg-white/20 text-white text-xs font-semibold py-2 px-3.5 rounded-lg transition border border-white/10">Logout</a>
-                      </div>
-                  </div>
-
-                  <!-- Lisensi Saya -->
-                  <div class="bg-[#111113] border border-[#27272a] rounded-2xl p-6 shadow-xl space-y-4">
-                    <div class="flex items-center justify-between">
-                      <h2 class="text-base font-bold text-white flex items-center gap-2">
-                        <span>📦</span>
-                        <span>Lisensi ShotAi Saya</span>
-                      </h2>
-                      <span class="text-xs text-gray-400">${myLicenses.length} Lisensi Tertaut</span>
-                    </div>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      ${licenseCardsHtml}
-                    </div>
-                  </div>
-
-                  <!-- Download & Panduan -->
-                  <div class="bg-[#111113] border border-[#27272a] rounded-2xl p-6 shadow-xl">
-                    <h3 class="text-sm font-bold text-white mb-3 flex items-center gap-2">
-                      <span>💻</span> Download & Akses Aplikasi Desktop
-                    </h3>
-                    <p class="text-xs text-gray-400 mb-4 leading-relaxed">
-                      Gunakan aplikasi ShotAi di PC/Laptop Windows Anda untuk menjalankan Google Flow, Dola AI, Grok, ChatGPT, Storyboard Maker, dan Video Karaoke dalam satu desktop workspace.
-                    </p>
-                    <div class="flex flex-wrap gap-3">
-                      <a href="https://shot-ai-new.vercel.app/" class="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-bold px-4 py-2.5 rounded-lg transition shadow-md shadow-indigo-600/30 flex items-center gap-1.5">
-                        <span>⬇️</span> Download untuk Windows
-                      </a>
-                      <a href="https://wa.me/6285261475052" target="_blank" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-4 py-2.5 rounded-lg transition shadow-md flex items-center gap-1.5">
-                        <span>💬</span> WhatsApp Bantuan Pelanggan
-                      </a>
-                    </div>
-                  </div>
+      <body class="bg-[#09090b] min-h-screen py-8 px-4 flex flex-col items-center">
+          
+          <!-- Top Navigation Header -->
+          <div class="w-full max-w-4xl flex items-center justify-between mb-4">
+              <a href="/" class="flex items-center gap-2 text-xs font-semibold text-gray-300 hover:text-white transition bg-[#18181b] border border-[#27272a] hover:border-gray-500 px-4 py-2 rounded-xl">
+                  <span>←</span>
+                  <span>Kembali ke Beranda</span>
+              </a>
+              <div class="flex items-center gap-3">
+                  ${req.user.role === 'superadmin' ? '<a href="/admin" class="text-xs font-semibold text-purple-300 bg-purple-950/60 border border-purple-800/60 px-3.5 py-2 rounded-xl hover:bg-purple-900/60 transition">👑 Dashboard Superadmin</a>' : ''}
+                  <a href="/logout" class="text-xs font-semibold text-red-300 bg-red-950/60 border border-red-800/60 px-3.5 py-2 rounded-xl hover:bg-red-900/60 transition">Logout</a>
               </div>
           </div>
 
+          <!-- Main White Card Container (Circled in Blue in User Screenshot) -->
+          <div class="w-full max-w-4xl bg-white rounded-2xl p-6 md:p-10 border border-gray-200 shadow-2xl">
+              
+              <!-- Header Section -->
+              <div class="mb-8">
+                  <p class="text-[11px] font-extrabold uppercase tracking-wider text-purple-600 mb-1">AKUN SAYA</p>
+                  <h1 class="text-2xl md:text-3xl font-black text-gray-900 tracking-tight">${userEmail}</h1>
+                  <p class="text-xs text-gray-500 mt-1">Lisensi, pesanan, dan pembayaran yang terhubung dengan email Google Anda.</p>
+              </div>
+
+              <!-- 3 Summary Stat Boxes -->
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+                  <!-- Box 1: Lisensi aktif -->
+                  <div class="bg-gray-50/90 border border-gray-200/90 rounded-2xl p-5 hover:border-gray-300 transition">
+                      <span class="text-xs font-medium text-gray-500">Lisensi aktif</span>
+                      <div class="text-3xl font-black text-blue-600 mt-2">${activeLicensesCount}</div>
+                  </div>
+
+                  <!-- Box 2: Pesanan berjalan -->
+                  <div class="bg-gray-50/90 border border-gray-200/90 rounded-2xl p-5 hover:border-gray-300 transition">
+                      <span class="text-xs font-medium text-gray-500">Pesanan berjalan</span>
+                      <div class="text-3xl font-black text-gray-900 mt-2">${pendingOrdersCount}</div>
+                  </div>
+
+                  <!-- Box 3: Pesanan selesai -->
+                  <div class="bg-gray-50/90 border border-gray-200/90 rounded-2xl p-5 hover:border-gray-300 transition">
+                      <span class="text-xs font-medium text-gray-500">Pesanan selesai</span>
+                      <div class="text-3xl font-black text-blue-600 mt-2">${completedOrdersCount}</div>
+                  </div>
+              </div>
+
+              <!-- Tabs Navigation -->
+              <div class="flex border-b border-gray-200 gap-8 mb-6">
+                  <button id="tabBtnOrders" onclick="switchTab('orders')" class="pb-3 text-sm font-bold text-indigo-600 border-b-2 border-indigo-600 transition cursor-pointer">
+                      Riwayat Pesanan & Hasil
+                  </button>
+                  <button id="tabBtnLicenses" onclick="switchTab('licenses')" class="pb-3 text-sm font-semibold text-gray-500 hover:text-gray-900 transition cursor-pointer">
+                      Lisensi Saya
+                  </button>
+              </div>
+
+              <!-- TAB 1: Riwayat Pesanan & Hasil -->
+              <div id="tabContentOrders">
+                  <!-- Filter Row -->
+                  <div class="flex justify-end items-center mb-4">
+                      <div class="flex items-center gap-2">
+                          <span class="text-xs text-gray-500 font-medium">Tampilkan</span>
+                          <select id="orderFilter" onchange="filterOrders(this.value)" class="text-xs bg-gray-50 border border-gray-300 rounded-lg px-3 py-1.5 text-gray-700 font-semibold focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer">
+                              <option value="all">Pending & Selesai</option>
+                              <option value="selesai">Selesai</option>
+                              <option value="pending">Pending</option>
+                          </select>
+                      </div>
+                  </div>
+
+                  <!-- Orders List -->
+                  <div class="space-y-3" id="ordersContainer">
+                      ${ordersHtml}
+                  </div>
+              </div>
+
+              <!-- TAB 2: Lisensi Saya -->
+              <div id="tabContentLicenses" class="hidden">
+                  <!-- Licenses Grid -->
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                      ${licenseCardsHtml}
+                  </div>
+
+                  <!-- Claim Form -->
+                  <div class="bg-gray-50 border border-gray-200 rounded-xl p-6 mb-6">
+                      <h4 class="text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5">Tautkan Lisensi Baru</h4>
+                      <p class="text-xs text-gray-500 mb-3">Masukkan kode lisensi ShotAi untuk menautkannya secara instan ke email ini.</p>
+                      <form id="claimForm" class="flex flex-col sm:flex-row gap-2">
+                          <input type="text" id="claimCode" placeholder="Contoh: AKA-XXXX-XXXX" class="flex-1 p-2.5 bg-white text-gray-900 border border-gray-300 rounded-lg text-xs font-mono uppercase focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                          <button type="submit" id="claimBtn" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-5 py-2.5 rounded-lg transition shadow cursor-pointer">Tautkan Lisensi</button>
+                      </form>
+                  </div>
+
+                  <!-- Download & Support Links -->
+                  <div class="flex flex-wrap gap-3 pt-6 border-t border-gray-200">
+                      <a href="/#tutorial" class="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition shadow flex items-center gap-2">
+                          <span>⬇️</span> Download untuk Windows
+                      </a>
+                      <a href="https://wa.me/6285261475052" target="_blank" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition shadow flex items-center gap-2">
+                          <span>💬</span> WhatsApp Bantuan Pelanggan
+                      </a>
+                  </div>
+              </div>
+
+          </div>
+
           <script>
-            function copyCode(code) {
-              navigator.clipboard.writeText(code).then(() => {
-                alert('Kode lisensi disalin: ' + code);
+            function copyCode(text) {
+              navigator.clipboard.writeText(text).then(() => {
+                alert('Kode disalin: ' + text);
               }).catch(() => {
-                prompt('Salin kode berikut:', code);
+                prompt('Salin kode berikut:', text);
+              });
+            }
+
+            function switchTab(tab) {
+              const btnOrders = document.getElementById('tabBtnOrders');
+              const btnLicenses = document.getElementById('tabBtnLicenses');
+              const contentOrders = document.getElementById('tabContentOrders');
+              const contentLicenses = document.getElementById('tabContentLicenses');
+
+              if (tab === 'orders') {
+                btnOrders.className = 'pb-3 text-sm font-bold text-indigo-600 border-b-2 border-indigo-600 transition cursor-pointer';
+                btnLicenses.className = 'pb-3 text-sm font-semibold text-gray-500 hover:text-gray-900 transition cursor-pointer';
+                contentOrders.classList.remove('hidden');
+                contentLicenses.classList.add('hidden');
+              } else {
+                btnLicenses.className = 'pb-3 text-sm font-bold text-indigo-600 border-b-2 border-indigo-600 transition cursor-pointer';
+                btnOrders.className = 'pb-3 text-sm font-semibold text-gray-500 hover:text-gray-900 transition cursor-pointer';
+                contentLicenses.classList.remove('hidden');
+                contentOrders.classList.add('hidden');
+              }
+            }
+
+            function filterOrders(status) {
+              const cards = document.querySelectorAll('.order-card');
+              cards.forEach(c => {
+                const cardStatus = c.getAttribute('data-status');
+                if (status === 'all') {
+                  c.style.display = 'flex';
+                } else if (cardStatus === status) {
+                  c.style.display = 'flex';
+                } else {
+                  c.style.display = 'none';
+                }
               });
             }
 
@@ -1636,7 +1980,12 @@ app.get('/dashboard', requireAuth, async (req, res) => {
               claimForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const code = document.getElementById('claimCode').value;
+                const btn = document.getElementById('claimBtn');
                 if (!code) return;
+
+                btn.disabled = true;
+                btn.textContent = 'Memproses...';
+
                 try {
                   const res = await fetch('/api/claim-license', {
                     method: 'POST',
@@ -1649,9 +1998,13 @@ app.get('/dashboard', requireAuth, async (req, res) => {
                     window.location.reload();
                   } else {
                     alert('Gagal: ' + data.message);
+                    btn.disabled = false;
+                    btn.textContent = 'Tautkan Lisensi';
                   }
                 } catch(e) {
                   alert('Terjadi kesalahan jaringan.');
+                  btn.disabled = false;
+                  btn.textContent = 'Tautkan Lisensi';
                 }
               });
             }
